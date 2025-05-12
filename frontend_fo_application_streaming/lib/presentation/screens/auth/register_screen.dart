@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
-import 'package:frontend_fo_application_streaming/presentation/screens/home_page.dart';
-import 'package:frontend_fo_application_streaming/services/auth_service.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/home/home_page.dart';
+import 'package:frontend_fo_application_streaming/domain/services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

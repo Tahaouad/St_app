@@ -1,7 +1,6 @@
 'use strict';
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Categories', {
       id: {
         allowNull: false,
@@ -10,10 +9,23 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       name: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: false,
+        unique: true
       },
       description: {
         type: Sequelize.STRING
+      },
+      imageUrl: {
+        type: Sequelize.STRING
+      },
+      isActive: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true
+      },
+      displayOrder: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
       },
       createdAt: {
         allowNull: false,
@@ -25,7 +37,7 @@ module.exports = {
       }
     });
   },
-  async down(queryInterface, Sequelize) {
+  down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable('Categories');
   }
 };

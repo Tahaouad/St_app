@@ -1,10 +1,12 @@
+// lib/presentation/screens/home_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:frontend_fo_application_streaming/presentation/widgets/horizontal_list.dart';
-import 'package:frontend_fo_application_streaming/services/auth_service.dart';
-import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
-import 'package:frontend_fo_application_streaming/presentation/widgets/custom_drawer.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
+import 'package:frontend_fo_application_streaming/domain/services/auth_service.dart';
+import 'package:frontend_fo_application_streaming/presentation/widgets/custom_drawer.dart';
+import 'package:frontend_fo_application_streaming/presentation/widgets/horizontal_list.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,14 +22,23 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   double _scrollOffset = 0.0;
   bool _isAppBarExpanded = true;
+  int _selectedCategoryIndex = 0;
+
+  final List<String> _categories = [
+    'Pour vous',
+    'Séries',
+    'Films',
+    'Ma liste',
+    'Top 10',
+  ];
 
   @override
+
   void initState() {
     super.initState();
     _loadUserProfile();
     _scrollController.addListener(_onScroll);
 
-    // Pour une immersion totale
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -44,7 +55,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onScroll() {
-    // Calcul pour l'effet de fondu de la barre d'app
     final bool isExpanded = _scrollController.offset < 300;
     if (_isAppBarExpanded != isExpanded) {
       setState(() {
@@ -69,8 +79,183 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _isLoading = false;
       });
-      // Gérer l'erreur silencieusement ou afficher un toast
     }
+  }
+
+  void _handleCategorySelection(int index) {
+    setState(() {
+      _selectedCategoryIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
+    if (_user == null) {
+      return _buildNotLoggedInScreen();
+    }
+
+    return _buildMainScreen();
+  }
+
+  Widget _buildNotLoggedInScreen() {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.primary, size: 60),
+            const SizedBox(height: 16),
+            const Text(
+              'Utilisateur non connecté',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => _loadUserProfile(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text(
+                'Réessayer',
+                style: TextStyle(color: AppColors.textPrimary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainScreen() {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      extendBodyBehindAppBar: true,
+      drawer: CustomDrawer(
+        user: _user,
+        onLogout: () async {
+          await _authService.logout();
+          if (mounted) {
+            Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+          }
+        },
+      ),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        controller: _scrollController,
+        slivers: [
+          _buildAppBar(),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _buildCategories(),
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildListDelegate([
+              const SizedBox(height: 16),
+              _buildHorizontalListWithHeader(
+                'Tendances actuelles',
+                Icons.trending_up,
+                List.generate(
+                  10,
+                  (index) =>
+                      'https://image.tmdb.org/t/p/w500/${index % 2 == 0 ? 'q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg' : 'vZloFAK7NmvMGKE7VkF5UHaz0I.jpg'}',
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildHorizontalListWithHeader(
+                'Nouveautés',
+                Icons.new_releases,
+                List.generate(
+                  10,
+                  (index) =>
+                      'https://image.tmdb.org/t/p/w500/${index % 2 == 0 ? '8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg' : 'vZloFAK7NmvMGKE7VkF5UHaz0I.jpg'}',
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildHorizontalListWithHeader(
+                'Recommandé pour vous',
+                Icons.recommend,
+                List.generate(
+                  10,
+                  (index) =>
+                      'https://image.tmdb.org/t/p/w500/${index % 2 == 0 ? 'q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg' : '8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg'}',
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildHorizontalListWithHeader(
+                'Populaire',
+                Icons.star,
+                List.generate(
+                  10,
+                  (index) =>
+                      'https://image.tmdb.org/t/p/w500/${index % 2 == 0 ? 'vZloFAK7NmvMGKE7VkF5UHaz0I.jpg' : 'q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg'}',
+                ),
+              ),
+              const SizedBox(height: 40),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  SliverAppBar _buildAppBar() {
+    return SliverAppBar(
+      expandedHeight: 600,
+      floating: false,
+      pinned: true,
+      stretch: true,
+      backgroundColor:
+          _scrollOffset > 300 ? AppColors.background : Colors.transparent,
+      elevation: _scrollOffset > 300 ? 8 : 0,
+      title:
+          _scrollOffset > 300
+              ? const Text(
+                'Moroccanflix',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  color: AppColors.primary,
+                ),
+              )
+              : null,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search, color: AppColors.textPrimary),
+          onPressed: () {},
+        ),
+        IconButton(
+          icon: CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.white,
+            child: SvgPicture.network(
+              _user?['avatar'] ?? 'https://i.pravatar.cc/150?img=11',
+            ),
+          ),
+          onPressed: () {},
+        ),
+        const SizedBox(width: 8),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: _buildFeaturedContent(),
+        collapseMode: CollapseMode.parallax,
+      ),
+    );
   }
 
   Widget _buildFeaturedContent() {
@@ -78,15 +263,12 @@ class _HomePageState extends State<HomePage> {
       children: [
         // Image d'arrière-plan
         Container(
-          height: 600, // Légèrement plus grand pour un meilleur impact visuel
+          height: 600,
           decoration: const BoxDecoration(
             image: DecorationImage(
               image: AssetImage('assets/images/welcome.jpg'),
               fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                Colors.black26, // Légèrement assombri pour mieux lire le texte
-                BlendMode.darken,
-              ),
+              colorFilter: ColorFilter.mode(Colors.black26, BlendMode.darken),
             ),
           ),
         ),
@@ -274,175 +456,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
-    }
-
-    if (_user == null) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                color: AppColors.primary,
-                size: 60,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Utilisateur non connecté',
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => _loadUserProfile(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-                child: const Text(
-                  'Réessayer',
-                  style: TextStyle(color: AppColors.textPrimary),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      extendBodyBehindAppBar: true,
-      drawer: CustomDrawer(user: _user, authService: _authService),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        controller: _scrollController,
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 600,
-            floating: false,
-            pinned: true,
-            stretch: true,
-            backgroundColor:
-                _scrollOffset > 300 ? AppColors.background : Colors.transparent,
-            elevation: _scrollOffset > 300 ? 8 : 0,
-            title:
-                _scrollOffset > 300
-                    ? const Text(
-                      'Moroccanflix',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
-                        color: AppColors.primary,
-                      ),
-                    )
-                    : null,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search, color: AppColors.textPrimary),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: SvgPicture.network(
-                    _user?['avatar'] ?? 'https://i.pravatar.cc/150?img=11',
-                  ),
-                ),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 8),
-            ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: _buildFeaturedContent(),
-              collapseMode: CollapseMode.parallax,
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: _buildCategories(),
-            ),
-          ),
-          SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: 16),
-              _buildHorizontalListWithHeader(
-                'Tendances actuelles',
-                Icons.trending_up,
-                List.generate(
-                  10,
-                  (index) =>
-                      'https://image.tmdb.org/t/p/w500/${index % 2 == 0 ? 'q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg' : 'vZloFAK7NmvMGKE7VkF5UHaz0I.jpg'}',
-                ),
-              ),
-              const SizedBox(height: 24),
-              _buildHorizontalListWithHeader(
-                'Nouveautés',
-                Icons.new_releases,
-                List.generate(
-                  10,
-                  (index) =>
-                      'https://image.tmdb.org/t/p/w500/${index % 2 == 0 ? '8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg' : 'vZloFAK7NmvMGKE7VkF5UHaz0I.jpg'}',
-                ),
-              ),
-              const SizedBox(height: 24),
-              _buildHorizontalListWithHeader(
-                'Recommandé pour vous',
-                Icons.recommend,
-                List.generate(
-                  10,
-                  (index) =>
-                      'https://image.tmdb.org/t/p/w500/${index % 2 == 0 ? 'q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg' : '8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg'}',
-                ),
-              ),
-              const SizedBox(height: 24),
-              _buildHorizontalListWithHeader(
-                'Populaire',
-                Icons.star,
-                List.generate(
-                  10,
-                  (index) =>
-                      'https://image.tmdb.org/t/p/w500/${index % 2 == 0 ? 'vZloFAK7NmvMGKE7VkF5UHaz0I.jpg' : 'q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg'}',
-                ),
-              ),
-              const SizedBox(height: 40),
-            ]),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCategories() {
-    final categories = ['Pour vous', 'Séries', 'Films', 'Ma liste', 'Top 10'];
-
     return SizedBox(
       height: 40,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length,
+        itemCount: _categories.length,
         itemBuilder: (context, index) {
-          bool isSelected = index == 0;
+          bool isSelected = index == _selectedCategoryIndex;
           return Padding(
             padding: const EdgeInsets.only(right: 12),
             child: TextButton(
-              onPressed: () {},
+              onPressed: () => _handleCategorySelection(index),
               style: TextButton.styleFrom(
                 backgroundColor:
                     isSelected
@@ -460,7 +486,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
               ),
               child: Text(
-                categories[index],
+                _categories[index],
                 style: TextStyle(
                   color:
                       isSelected ? AppColors.primary : AppColors.textSecondary,

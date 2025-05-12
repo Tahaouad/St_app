@@ -1,38 +1,70 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Movie extends Model {
-   
     static associate(models) {
-      Movie.belongsTo(models.Category, { foreignKey: 'categoryId' }); // Un film appartient à une catégorie
-      models.Category.hasMany(Movie, { foreignKey: 'categoryId' }); // Une catégorie a plusieurs films
-
-      Movie.belongsToMany(models.Genre, { through: 'MovieGenres', foreignKey: 'movieId' }); // Film a plusieurs genres
-      models.Genre.belongsToMany(Movie, { through: 'MovieGenres', foreignKey: 'genreId' });
-
+      Movie.belongsTo(models.Category, { foreignKey: 'categoryId' });
+      Movie.belongsToMany(models.Genre, { through: 'MovieGenres', foreignKey: 'movieId' });
+      
       Movie.hasMany(models.Favorite, { foreignKey: 'movieId' });
       Movie.hasMany(models.Rating, { foreignKey: 'movieId' });
       Movie.hasMany(models.WatchHistory, { foreignKey: 'movieId' });
       Movie.hasMany(models.Media, { foreignKey: 'movieId' });
-
     }
   }
+  
   Movie.init({
-    title: DataTypes.STRING,
-    description: DataTypes.STRING,
-    duration: DataTypes.INTEGER,
-    releaseYear: DataTypes.INTEGER,
-    generalId: DataTypes.INTEGER,
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: false
+    },
+    duration: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    releaseYear: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
     director: DataTypes.STRING,
-    cast: DataTypes.STRING,
-    ratingAVG: DataTypes.FLOAT,
+    cast: DataTypes.TEXT,
+    ratingAVG: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0
+    },
     posterUrl: DataTypes.STRING,
-    trailerUrl: DataTypes.STRING
+    backdropUrl: DataTypes.STRING,
+    trailerUrl: DataTypes.STRING,
+    videoUrl: DataTypes.STRING,
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
+    },
+    categoryId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    isFeatured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    maturityRating: {
+      type: DataTypes.STRING,
+      defaultValue: 'PG'
+    },
+    viewCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    }
   }, {
     sequelize,
     modelName: 'Movie',
   });
+  
   return Movie;
 };

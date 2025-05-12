@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
-import 'register_screen.dart';
-import 'package:frontend_fo_application_streaming/services/auth_service.dart';
-import '../home_page.dart';
+import 'package:frontend_fo_application_streaming/data/providers/auth_provider.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/auth/register_screen.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/home/home_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,10 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
-
   bool _obscurePassword = true;
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -27,36 +25,22 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() async {
-    setState(() => _isLoading = true);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final result = await _authService.login(
-      _emailController.text,
-      _passwordController.text,
-    );
+    await authProvider.login(_emailController.text, _passwordController.text);
 
-    setState(() => _isLoading = false);
-
-    if (result['success']) {
-      final userProfile = await _authService.getProfile();
-      if (userProfile == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to fetch user profile')),
-        );
-        return;
-      }
+    if (authProvider.isAuthenticated && mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result['message'])));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -89,6 +73,30 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 48),
 
+              // Afficher un message d'erreur si présent
+              if (authProvider.error != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          authProvider.error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Email Field
               TextField(
                 controller: _emailController,
@@ -108,6 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderSide: BorderSide(color: AppColors.primary),
                   ),
                 ),
+                enabled: !authProvider.isLoading,
               ),
               const SizedBox(height: 24),
 
@@ -143,6 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderSide: BorderSide(color: AppColors.primary),
                   ),
                 ),
+                enabled: !authProvider.isLoading,
               ),
               const SizedBox(height: 16),
 
@@ -150,7 +160,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: authProvider.isLoading ? null : () {},
                   child: const Text(
                     'Forgot Password?',
                     style: TextStyle(color: AppColors.primary),
@@ -167,9 +177,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  onPressed: _isLoading ? null : _login,
+                  onPressed: authProvider.isLoading ? null : _login,
                   child:
-                      _isLoading
+                      authProvider.isLoading
                           ? const SizedBox(
                             height: 20,
                             width: 20,
@@ -198,12 +208,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   TextButton(
                     onPressed:
-                        () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterScreen(),
-                          ),
-                        ),
+                        authProvider.isLoading
+                            ? null
+                            : () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RegisterScreen(),
+                              ),
+                            ),
                     child: const Text(
                       'Register',
                       style: TextStyle(

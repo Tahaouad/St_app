@@ -1,7 +1,6 @@
 'use strict';
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Seasons', {
       id: {
         allowNull: false,
@@ -10,22 +9,42 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       seriesId: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Series',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       seasonNumber: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        allowNull: false
       },
       title: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: false
       },
       description: {
-        type: Sequelize.STRING
+        type: Sequelize.TEXT
       },
       releaseDate: {
         type: Sequelize.DATE
       },
       posterUrl: {
         type: Sequelize.STRING
+      },
+      trailerUrl: {
+        type: Sequelize.STRING
+      },
+      episodeCount: {
+        type: Sequelize.INTEGER,
+        defaultValue: 0
+      },
+      isActive: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true
       },
       createdAt: {
         allowNull: false,
@@ -37,7 +56,7 @@ module.exports = {
       }
     });
   },
-  async down(queryInterface, Sequelize) {
+  down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable('Seasons');
   }
-};
+};  

@@ -1,17 +1,14 @@
+// lib/presentation/widgets/custom_drawer.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
-import 'package:frontend_fo_application_streaming/services/auth_service.dart';
 
 class CustomDrawer extends StatelessWidget {
   final Map<String, dynamic>? user;
-  final AuthService authService;
+  final VoidCallback onLogout;
 
-  const CustomDrawer({
-    super.key,
-    required this.user,
-    required this.authService,
-  });
+  const CustomDrawer({super.key, required this.user, required this.onLogout});
 
   @override
   Widget build(BuildContext context) {
@@ -365,10 +362,7 @@ class CustomDrawer extends StatelessWidget {
           );
 
           if (confirm == true) {
-            await authService.logout();
-            if (context.mounted) {
-              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-            }
+            onLogout();
           }
         },
         style: ElevatedButton.styleFrom(
