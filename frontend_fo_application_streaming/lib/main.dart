@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend_fo_application_streaming/data/providers/auth_provider.dart';
 import 'package:frontend_fo_application_streaming/data/providers/content_provider.dart';
+import 'package:frontend_fo_application_streaming/data/providers/home_provider.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/auth/login_screen.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/home/home_page.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/welcome/welcome_screen.dart';
@@ -12,6 +13,9 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ContentProvider()),
+        ChangeNotifierProvider(
+          create: (_) => HomeProvider(),
+        ), // Added HomeProvider
       ],
       child: const MyApp(),
     ),

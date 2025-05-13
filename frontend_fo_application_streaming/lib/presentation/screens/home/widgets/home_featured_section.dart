@@ -1,0 +1,43 @@
+import 'package:flutter/material.dart';
+import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
+import 'package:frontend_fo_application_streaming/presentation/widgets/featured_content.dart';
+
+class HomeFeaturedSection extends StatelessWidget {
+  final List<ContentItem> featuredContent;
+
+  const HomeFeaturedSection({super.key, required this.featuredContent});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 600,
+      child: PageView.builder(
+        itemCount: featuredContent.length,
+        itemBuilder: (context, index) {
+          final content = featuredContent[index];
+          return FeaturedContent(
+            title: content.title,
+            description: content.description,
+            imageUrl:
+                content.posterUrl ??
+                content.backdropUrl ??
+                'assets/images/welcome.jpg',
+            rating: content.rating,
+            year: content.releaseYear.toString(),
+            quality: '4K Ultra HD',
+            type: content.type == ContentType.movie ? 'Film' : 'Série',
+            onPlayPressed: () {
+              // TODO: Navigation vers le lecteur vidéo
+            },
+            onAddToListPressed: () {
+              // TODO: Ajouter aux favoris
+            },
+            onInfoPressed: () {
+              // TODO: Navigation vers les détails
+            },
+          );
+        },
+      ),
+    );
+  }
+}
