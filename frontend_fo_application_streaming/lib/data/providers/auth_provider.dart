@@ -11,7 +11,6 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
-
   Future<void> login(String email, String password) async {
     _isLoading = true;
     _error = null;
@@ -20,7 +19,13 @@ class AuthProvider extends ChangeNotifier {
     try {
       final result = await _authService.login(email, password);
       if (result['success']) {
-        _user = await _authService.getProfile();
+        // Récupérer le profil immédiatement après le login
+        final profile = await _authService.getProfile();
+        if (profile != null) {
+          _user = profile;
+        } else {
+          _error = 'Impossible de charger le profil utilisateur';
+        }
       } else {
         _error = result['message'];
       }

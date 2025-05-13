@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
+import 'package:frontend_fo_application_streaming/data/providers/auth_provider.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/home/home_page.dart';
-import 'package:frontend_fo_application_streaming/domain/services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,11 +18,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _userNameController = TextEditingController();
-  final _authService = AuthService();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isLoading = false;
   String? _selectedAvatar;
 
   final List<String> _avatars = [
@@ -46,56 +45,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedAvatar == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please select an avatar")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select an avatar")),
+      );
       return;
     }
 
-    setState(() => _isLoading = true);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final result = await _authService.register(
+    await authProvider.register(
       _userNameController.text,
       _emailController.text,
       _passwordController.text,
       _selectedAvatar,
     );
 
-    setState(() => _isLoading = false);
-
-    if (result['success']) {
-      // Login automatically after successful registration
-      final loginResult = await _authService.login(
-        _emailController.text,
-        _passwordController.text,
+    if (authProvider.error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(authProvider.error!)),
       );
-
-      if (loginResult['success']) {
-        final userProfile = await _authService.getProfile();
-        if (userProfile == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to fetch user profile')),
-          );
-          return;
-        }
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(loginResult['message'])));
-      }
-    } else {
-      ScaffoldMessenger.of(
+    } else if (authProvider.isAuthenticated && mounted) {
+      // Navigation vers la page d'accueil si l'authentification est réussie
+      Navigator.pushReplacement(
         context,
-      ).showSnackBar(SnackBar(content: Text(result['message'])));
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -161,11 +142,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderSide: BorderSide(color: Colors.red),
                     ),
                   ),
-                  validator:
-                      (value) =>
-                          value == null || value.isEmpty
-                              ? 'Please enter a username'
-                              : null,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Please enter a username'
+                      : null,
                 ),
                 const SizedBox(height: 24),
 
@@ -316,24 +295,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    onPressed: _isLoading ? null : _register,
-                    child:
-                        _isLoading
-                            ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
-                            )
-                            : const Text(
-                              'REGISTER',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    onPressed: authProvider.isLoading ? null : _register,
+                    child: authProvider.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
                             ),
+                          )
+                        : const Text(
+                            'REGISTER',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -412,10 +390,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             width: 64,
                             height: 64,
                             fit: BoxFit.cover,
-                            placeholderBuilder:
-                                (context) => const CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                            placeholderBuilder: (context) =>
+                                const CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
                           ),
                         ),
                       ),
