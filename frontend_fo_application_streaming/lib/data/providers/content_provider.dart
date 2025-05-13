@@ -11,19 +11,24 @@ class ContentProvider extends ChangeNotifier {
   String? _error;
 
   List<ContentItem> _featuredContent = [];
-  List<ContentItem> _trendingContent = [];
-  List<ContentItem> _newReleases = [];
-  List<ContentItem> _recommendedContent = [];
   List<ContentItem> _popularContent = [];
+  List<ContentItem> _movies = [];
+  List<ContentItem> _series = [];
 
   // Getters
   bool get isLoading => _isLoading;
   String? get error => _error;
   List<ContentItem> get featuredContent => _featuredContent;
-  List<ContentItem> get trendingContent => _trendingContent;
-  List<ContentItem> get newReleases => _newReleases;
-  List<ContentItem> get recommendedContent => _recommendedContent;
   List<ContentItem> get popularContent => _popularContent;
+  List<ContentItem> get movies => _movies;
+  List<ContentItem> get series => _series;
+
+  // Pour les catégories simulées (à remplacer par des vraies données plus tard)
+  List<ContentItem> get trendingContent => _popularContent.take(10).toList();
+  List<ContentItem> get newReleases =>
+      [..._movies, ..._series].take(10).toList();
+  List<ContentItem> get recommendedContent =>
+      _featuredContent.take(10).toList();
 
   // Méthode pour charger tout le contenu
   Future<void> loadAllContent() async {
@@ -34,10 +39,9 @@ class ContentProvider extends ChangeNotifier {
     try {
       await Future.wait([
         _loadFeaturedContent(),
-        _loadTrendingContent(),
-        _loadNewReleases(),
-        _loadRecommendedContent(),
         _loadPopularContent(),
+        loadMovies(), // Utiliser loadMovies() sans underscore
+        loadSeries(), // Utiliser loadSeries() sans underscore
       ]);
     } catch (e) {
       _error = 'Erreur lors du chargement du contenu: ${e.toString()}';
@@ -47,10 +51,85 @@ class ContentProvider extends ChangeNotifier {
     }
   }
 
+  // Méthode pour charger les films avec filtres
+  Future<void> loadMovies({
+    int? categoryId,
+    int? genreId,
+    String? search,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _movieService.getMovies(
+        categoryId: categoryId,
+        genreId: genreId,
+        search: search,
+        limit: limit,
+        offset: offset,
+      );
+
+      if (result['success']) {
+        final data = result['data'];
+        _movies =
+            (data['rows'] as List)
+                .map((movie) => ContentItem.fromJson(movie))
+                .toList();
+      } else {
+        _error = result['message'];
+      }
+    } catch (e) {
+      _error = 'Erreur lors du chargement des films: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Méthode pour charger les séries avec filtres
+  Future<void> loadSeries({
+    int? categoryId,
+    int? genreId,
+    String? search,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final result = await _seriesService.getSeries(
+        categoryId: categoryId,
+        genreId: genreId,
+        search: search,
+        limit: limit,
+        offset: offset,
+      );
+
+      if (result['success']) {
+        final data = result['data'];
+        _series =
+            (data['rows'] as List)
+                .map((series) => ContentItem.fromJson(series))
+                .toList();
+      } else {
+        _error = result['message'];
+      }
+    } catch (e) {
+      _error = 'Erreur lors du chargement des séries: ${e.toString()}';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Méthodes privées pour charger différents types de contenu
   Future<void> _loadFeaturedContent() async {
     try {
-      // Charger les films mis en avant
       final movieResult = await _movieService.getFeaturedMovies();
       final seriesResult = await _seriesService.getFeaturedSeries();
 
@@ -72,7 +151,8 @@ class ContentProvider extends ChangeNotifier {
         );
       }
 
-      // Prendre seulement les 5 premiers éléments mis en avant
+      // Mélanger et limiter à 5 éléments
+      _featuredContent.shuffle();
       if (_featuredContent.length > 5) {
         _featuredContent = _featuredContent.sublist(0, 5);
       }
@@ -83,69 +163,8 @@ class ContentProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadTrendingContent() async {
-    try {
-      // Simuler des données de tendances (à remplacer par une vraie API)
-      await Future.delayed(const Duration(milliseconds: 500));
-      _trendingContent = List.generate(
-        10,
-        (index) => ContentItem(
-          id: 100 + index,
-          title: 'Trending Title ${index + 1}',
-          description: 'Description du contenu tendance ${index + 1}',
-          posterUrl:
-              'https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg',
-          rating: 7.5 + (index * 0.1),
-        ),
-      );
-    } catch (e) {
-      print('Erreur lors du chargement des tendances: ${e.toString()}');
-    }
-  }
-
-  Future<void> _loadNewReleases() async {
-    try {
-      // Simuler des données de nouvelles sorties (à remplacer par une vraie API)
-      await Future.delayed(const Duration(milliseconds: 500));
-      _newReleases = List.generate(
-        10,
-        (index) => ContentItem(
-          id: 200 + index,
-          title: 'New Release ${index + 1}',
-          description: 'Description de la nouvelle sortie ${index + 1}',
-          posterUrl:
-              'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',
-          rating: 8.0 + (index * 0.1),
-        ),
-      );
-    } catch (e) {
-      print('Erreur lors du chargement des nouvelles sorties: ${e.toString()}');
-    }
-  }
-
-  Future<void> _loadRecommendedContent() async {
-    try {
-      // Simuler des données recommandées (à remplacer par une vraie API)
-      await Future.delayed(const Duration(milliseconds: 500));
-      _recommendedContent = List.generate(
-        10,
-        (index) => ContentItem(
-          id: 300 + index,
-          title: 'Recommended Title ${index + 1}',
-          description: 'Description du contenu recommandé ${index + 1}',
-          posterUrl:
-              'https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7VkF5UHaz0I.jpg',
-          rating: 8.5 + (index * 0.1),
-        ),
-      );
-    } catch (e) {
-      print('Erreur lors du chargement des recommandations: ${e.toString()}');
-    }
-  }
-
   Future<void> _loadPopularContent() async {
     try {
-      // Charger les films populaires
       final movieResult = await _movieService.getPopularMovies();
       final seriesResult = await _seriesService.getPopularSeries();
 
@@ -166,6 +185,9 @@ class ContentProvider extends ChangeNotifier {
               .toList(),
         );
       }
+
+      // Mélanger les contenus populaires
+      _popularContent.shuffle();
     } catch (e) {
       print(
         'Erreur lors du chargement des contenus populaires: ${e.toString()}',
