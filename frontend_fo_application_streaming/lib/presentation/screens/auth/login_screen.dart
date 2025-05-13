@@ -178,22 +178,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   onPressed: authProvider.isLoading ? null : _login,
-                  child:
-                      authProvider.isLoading
-                          ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                            ),
-                          )
-                          : const Text(
-                            'LOGIN',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: AppColors.textPrimary,
-                            ),
+                  child: authProvider.isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
                           ),
+                        )
+                      : const Text(
+                          'LOGIN',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 32),
@@ -207,10 +206,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                   TextButton(
-                    onPressed:
-                        authProvider.isLoading
-                            ? null
-                            : () => Navigator.push(
+                    onPressed: authProvider.isLoading
+                        ? null
+                        : () => Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const RegisterScreen(),
