@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
-import 'package:frontend_fo_application_streaming/presentation/screens/content/content_details_screen.dart';
 import 'package:frontend_fo_application_streaming/presentation/widgets/featured_content.dart';
 
 class HomeFeaturedSection extends StatelessWidget {

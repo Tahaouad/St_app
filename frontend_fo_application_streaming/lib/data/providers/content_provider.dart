@@ -74,10 +74,9 @@ class ContentProvider extends ChangeNotifier {
 
       if (result['success']) {
         final data = result['data'];
-        _movies =
-            (data['rows'] as List)
-                .map((movie) => ContentItem.fromJson(movie))
-                .toList();
+        _movies = (data['rows'] as List)
+            .map((movie) => ContentItem.fromJson(movie))
+            .toList();
       } else {
         _error = result['message'];
       }
@@ -112,10 +111,9 @@ class ContentProvider extends ChangeNotifier {
 
       if (result['success']) {
         final data = result['data'];
-        _series =
-            (data['rows'] as List)
-                .map((series) => ContentItem.fromJson(series))
-                .toList();
+        _series = (data['rows'] as List)
+            .map((series) => ContentItem.fromJson(series))
+            .toList();
       } else {
         _error = result['message'];
       }

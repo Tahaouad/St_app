@@ -1,8 +1,8 @@
-// lib/presentation/screens/content/widgets/content_details_header.dart
 
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_details.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/player/youtube_player_page.dart';
 
 class ContentDetailsHeader extends StatelessWidget {
   final ContentDetails contentDetails;
@@ -14,36 +14,69 @@ class ContentDetailsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? imageUrl =
-        contentDetails.backdropUrl ?? contentDetails.posterUrl;
-
+    // Prioriser backdropUrl, puis posterUrl
+    final String? imageUrl = contentDetails.backdropUrl ?? contentDetails.posterUrl;
+    
     return Stack(
       fit: StackFit.expand,
       children: [
         // Image de fond
-        if (imageUrl != null)
+        if (imageUrl != null && imageUrl.isNotEmpty)
           Image.network(
             imageUrl,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              color: Colors.grey[900],
-              child: const Center(
-                child: Icon(
-                  Icons.error_outline,
-                  color: Colors.grey,
-                  size: 60,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                color: Colors.grey[900],
+                child: Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                    color: AppColors.primary,
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              print('Erreur de chargement de l\'image: $error');
+              print('URL tentée: $imageUrl');
+              return Container(
+                color: Colors.grey[900],
+                child: const Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.grey,
+                    size: 60,
+                  ),
+                ),
+              );
+            },
           )
         else
           Container(
             color: Colors.grey[900],
-            child: const Center(
-              child: Icon(
-                Icons.movie_outlined,
-                color: Colors.grey,
-                size: 100,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.movie_outlined,
+                    color: Colors.grey,
+                    size: 100,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    contentDetails.title,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
           ),
@@ -127,10 +160,18 @@ class ContentDetailsHeader extends StatelessWidget {
               const SizedBox(width: 12),
 
               // Bouton Bande-annonce
-              if (contentDetails.trailerUrl != null)
+              if (contentDetails.trailerUrl != null && contentDetails.trailerUrl!.isNotEmpty)
                 IconButton(
                   onPressed: () {
-                    // TODO: Lire la bande-annonce
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => YoutubePlayerPage(
+                          title: contentDetails.title,
+                          youtubeUrl: contentDetails.trailerUrl!,
+                        ),
+                      ),
+                    );
                   },
                   style: IconButton.styleFrom(
                     backgroundColor: Colors.black.withOpacity(0.5),
