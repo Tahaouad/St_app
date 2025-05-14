@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/content/content_details_screen.dart';
 import 'package:frontend_fo_application_streaming/presentation/widgets/featured_content.dart';
 
 class HomeFeaturedSection extends StatelessWidget {
@@ -18,8 +19,7 @@ class HomeFeaturedSection extends StatelessWidget {
           return FeaturedContent(
             title: content.title,
             description: content.description,
-            imageUrl:
-                content.posterUrl ??
+            imageUrl: content.posterUrl ??
                 content.backdropUrl ??
                 'assets/images/welcome.jpg',
             rating: content.rating,
@@ -28,12 +28,28 @@ class HomeFeaturedSection extends StatelessWidget {
             type: content.type == ContentType.movie ? 'Film' : 'Série',
             onPlayPressed: () {
               // TODO: Navigation vers le lecteur vidéo
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ContentDetailsScreen(
+                    contentItem: content,
+                  ),
+                ),
+              );
             },
             onAddToListPressed: () {
               // TODO: Ajouter aux favoris
             },
             onInfoPressed: () {
-              // TODO: Navigation vers les détails
+              // Navigation vers les détails
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ContentDetailsScreen(
+                    contentItem: content,
+                  ),
+                ),
+              );
             },
           );
         },

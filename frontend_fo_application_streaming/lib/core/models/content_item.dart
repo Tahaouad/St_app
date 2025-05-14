@@ -46,8 +46,10 @@ class ContentItem {
     this.status,
     this.endYear,
   });
-
   factory ContentItem.fromJson(Map<String, dynamic> json, {ContentType? type}) {
+    // Debug pour voir les URLs
+    print('ContentItem JSON: $json');
+
     // Déterminer le type de contenu si non fourni
     if (type == null) {
       if (json.containsKey('duration') &&
@@ -82,15 +84,6 @@ class ContentItem {
       status: json['status'],
       endYear: json['endYear'],
     );
-  }
-
-  String get displayType {
-    switch (type) {
-      case ContentType.movie:
-        return 'Film';
-      case ContentType.series:
-        return 'Série';
-    }
   }
 
   String get displayDuration {

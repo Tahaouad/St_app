@@ -97,7 +97,6 @@ class _HomePageState extends State<HomePage> {
         contentProvider.loadSeries();
         break;
       case 3: // Populaire
-        // Le contenu populaire est déjà chargé
         break;
       default: // Pour vous
         contentProvider.loadAllContent();

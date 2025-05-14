@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:frontend_fo_application_streaming/data/providers/content_provider.dart';
 import 'package:frontend_fo_application_streaming/presentation/widgets/content_section.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/home/widgets/skeleton_loaders.dart';
 
 class ForYouSection extends StatelessWidget {
   const ForYouSection({super.key});
@@ -9,6 +10,18 @@ class ForYouSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final contentProvider = Provider.of<ContentProvider>(context);
+
+    if (contentProvider.isLoading) {
+      return Column(
+        children: const [
+          ContentSectionSkeleton(),
+          SizedBox(height: 24),
+          ContentSectionSkeleton(),
+          SizedBox(height: 24),
+          ContentSectionSkeleton(),
+        ],
+      );
+    }
 
     return Column(
       children: [

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
-import 'package:frontend_fo_application_streaming/presentation/widgets/contenttile.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/content/content_details_screen.dart';
+import 'package:frontend_fo_application_streaming/presentation/widgets/ContentTile.dart';
 
 class ContentSection extends StatelessWidget {
   final String title;
@@ -67,14 +68,22 @@ class ContentSection extends StatelessWidget {
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final item = items[index];
-              return ContentTile(
+              return  ContentTile(
                 imageUrl: item.posterUrl,
                 title: item.title,
                 rating: item.rating,
                 year: item.releaseYear,
                 isNew: index == 0, // Marquer le premier élément comme nouveau
                 onTap: () {
-                  // TODO: Navigation vers les détails
+                  // Navigation vers les détails
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ContentDetailsScreen(
+                        contentItem: item,
+                      ),
+                    ),
+                  );
                 },
               );
             },
