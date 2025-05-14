@@ -1,10 +1,10 @@
-// lib/presentation/screens/content/widgets/similar_content_section.dart
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/content/content_details_screen.dart';
 import 'package:frontend_fo_application_streaming/presentation/widgets/ContentTile.dart';
 
+class SimilarContentSection extends StatelessWidget {
   final List<ContentItem> similarContent;
 
   const SimilarContentSection({

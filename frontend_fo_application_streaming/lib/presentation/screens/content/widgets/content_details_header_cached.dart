@@ -1,9 +1,8 @@
-// lib/presentation/screens/content/widgets/content_details_header_cached.dart
 
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_details.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/player/trailer_button.dart';
 
 class ContentDetailsHeaderCached extends StatelessWidget {
   final ContentDetails contentDetails;
@@ -24,29 +23,44 @@ class ContentDetailsHeaderCached extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Image de fond avec CachedNetworkImage
+        // Image de fond
         if (imageUrl != null && imageUrl.isNotEmpty)
-          CachedNetworkImage(
-            imageUrl: imageUrl,
+          Image.network(
+            imageUrl,
             fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              color: Colors.grey[900],
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: AppColors.primary,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                color: Colors.grey[900],
+                child: Center(
+                  child: CircularProgressIndicator(
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                    color: AppColors.primary,
+                  ),
                 ),
-              ),
-            ),
-            errorWidget: (context, url, error) {
-              print('Erreur CachedNetworkImage: $error pour URL: $url');
+              );
+            },
+            errorBuilder: (context, error, stackTrace) {
+              print('Erreur Image.network: $error pour URL: $imageUrl');
               // Essayer avec une image placeholder
-              return CachedNetworkImage(
-                imageUrl: placeholderUrl,
+              return Image.network(
+                placeholderUrl,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[900],
-                ),
-                errorWidget: (context, url, error) => Container(
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    color: Colors.grey[900],
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey[900],
                   child: Center(
                     child: Column(

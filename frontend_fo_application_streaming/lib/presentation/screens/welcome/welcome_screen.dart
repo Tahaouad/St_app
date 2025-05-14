@@ -111,14 +111,17 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           // Content with animations
           SafeArea(
             child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: SizedBox(
-                // This ensures the content takes up the full screen height
-                height:
-                    MediaQuery.of(context).size.height -
-                    MediaQuery.of(context).padding.top -
-                    MediaQuery.of(context).padding.bottom,
+              child: Container(
+                // Ajouter une hauteur minimale pour éviter l'overflow
+                constraints: BoxConstraints(
+                  minHeight: MediaQuery.of(context).size.height -
+                      MediaQuery.of(context).padding.top -
+                      MediaQuery.of(context).padding.bottom,
+                ),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
 
@@ -128,7 +131,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       child: _buildLogoSection(),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
 
                     // Title and subtitle
                     SlideTransition(
@@ -139,14 +142,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ),
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
 
                     // Features
-                    Expanded(
-                      child: FadeTransition(
-                        opacity: _fadeInAnimation,
-                        child: _buildFeaturesList(),
-                      ),
+                    FadeTransition(
+                      opacity: _fadeInAnimation,
+                      child: _buildFeaturesList(),
                     ),
 
                     const SizedBox(height: 40),
@@ -214,7 +215,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         const Text(
           "DAREDEVIL: REBORN",
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.bold,
             letterSpacing: 2.0,
             color: AppColors.textPrimary,
@@ -224,7 +225,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         const Text(
           "Thousands of movies and series await you.\nStart watching now.",
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             height: 1.5,
             color: AppColors.textSecondary,
           ),
@@ -253,12 +254,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       },
     ];
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: features.length,
-      itemBuilder: (context, index) {
-        final feature = features[index];
+    return Column(
+      children: features.map((feature) {
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -279,7 +276,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 child: Icon(
                   feature['icon'] as IconData,
                   color: AppColors.primary,
-                  size: 22,
+                  size: 20,
                 ),
               ),
               const SizedBox(width: 16),
@@ -291,7 +288,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       feature['title'] as String,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -309,7 +306,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             ],
           ),
         );
-      },
+      }).toList(),
     );
   }
 
@@ -322,9 +319,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder:
-                    (context, animation, secondaryAnimation) =>
-                        const LoginScreen(),
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const LoginScreen(),
                 transitionsBuilder: (
                   context,
                   animation,
@@ -352,7 +348,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            minimumSize: const Size.fromHeight(56),
+            minimumSize: const Size.fromHeight(50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -362,7 +358,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           child: const Text(
             'LOGIN',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
               letterSpacing: 1.2,
@@ -375,9 +371,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder:
-                    (context, animation, secondaryAnimation) =>
-                        const RegisterScreen(),
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const RegisterScreen(),
                 transitionsBuilder: (
                   context,
                   animation,
@@ -405,7 +400,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           },
           style: OutlinedButton.styleFrom(
             side: BorderSide(color: Colors.white.withOpacity(0.5), width: 1.5),
-            minimumSize: const Size.fromHeight(56),
+            minimumSize: const Size.fromHeight(50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
@@ -413,14 +408,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           child: const Text(
             'CREATE ACCOUNT',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
               letterSpacing: 1.2,
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         TextButton(
           onPressed: () {
             // Redirect to terms of use

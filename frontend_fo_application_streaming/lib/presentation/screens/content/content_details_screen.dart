@@ -1,10 +1,9 @@
-// lib/presentation/screens/content/content_details_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_details.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
+import 'package:frontend_fo_application_streaming/core/models/content_enums.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/content/widgets/content_details_header.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/content/widgets/episodes_section.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/content/widgets/similar_content_section.dart';
@@ -323,8 +322,11 @@ class _ContentDetailsScreenState extends State<ContentDetailsScreen>
                         ),
                       ),
                       const SizedBox(height: 16),
-                      SimilarContentSection(
-                        similarContent: _similarContent,
+                      SizedBox(
+                        height: 240,
+                        child: SimilarContentSection(
+                          similarContent: _similarContent,
+                        ),
                       ),
                     ],
                   ],

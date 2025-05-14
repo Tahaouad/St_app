@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
+import 'package:frontend_fo_application_streaming/core/models/content_enums.dart';
 import 'package:frontend_fo_application_streaming/presentation/widgets/featured_content.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/content/content_details_screen.dart';
 
 class HomeFeaturedSection extends StatelessWidget {
   final List<ContentItem> featuredContent;
@@ -26,7 +28,7 @@ class HomeFeaturedSection extends StatelessWidget {
             quality: '4K Ultra HD',
             type: content.type == ContentType.movie ? 'Film' : 'Série',
             onPlayPressed: () {
-              // TODO: Navigation vers le lecteur vidéo
+              // Navigation vers les détails du contenu
               Navigator.push(
                 context,
                 MaterialPageRoute(

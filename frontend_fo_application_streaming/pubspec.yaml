@@ -19,14 +19,15 @@ dependencies:
   shimmer: ^3.0.0
   
   # Video player (choisir l'un des trois)
-  # youtube_player_flutter: ^8.1.2  # Option 1: Simple YouTube player
-  # webview_flutter: ^4.4.2        # Option 2: WebView pour iframe
-  # flutter_inappwebview: ^6.0.0   # Option 3: WebView avancé
+  youtube_player_flutter: 9.1.1  # Option 1: Simple YouTube player
+  webview_flutter: ^4.4.2        # Option 2: WebView pour iframe
+  flutter_inappwebview: ^6.0.0   # Option 3: WebView avancé
   
   # Optionnel - pour améliorer l'expérience
-  # cached_network_image: ^3.3.1   # Pour cacher les images
-  # url_launcher: ^6.2.4          # Pour ouvrir dans le navigateur
-  
+  cached_network_image: ^3.3.1   # Pour cacher les images
+  url_launcher: ^6.2.4          # Pour ouvrir dans le navigateur
+
+
   # Other
   cupertino_icons: ^1.0.5
 
