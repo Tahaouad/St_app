@@ -1,25 +1,21 @@
-
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_details.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/player/trailer_button.dart';
 
-class ContentDetailsHeaderCached extends StatelessWidget {
+class ContentDetailsHeader extends StatelessWidget {
   final ContentDetails contentDetails;
 
-  const ContentDetailsHeaderCached({
+  const ContentDetailsHeader({
     super.key,
     required this.contentDetails,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Essayer backdrop d'abord, puis poster
+    // Prioriser backdropUrl, puis posterUrl
     final String? imageUrl = contentDetails.backdropUrl ?? contentDetails.posterUrl;
     
-    // Créer une URL de fallback si nécessaire
-    final String placeholderUrl = 'https://via.placeholder.com/800x450.png?text=${Uri.encodeComponent(contentDetails.title)}';
-
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -44,44 +40,15 @@ class ContentDetailsHeaderCached extends StatelessWidget {
               );
             },
             errorBuilder: (context, error, stackTrace) {
-              print('Erreur Image.network: $error pour URL: $imageUrl');
-              // Essayer avec une image placeholder
-              return Image.network(
-                placeholderUrl,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.grey[900],
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: Colors.grey[900],
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.movie_outlined,
-                          color: Colors.grey,
-                          size: 80,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          contentDetails.title,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+              print('Erreur de chargement de l\'image: $error');
+              print('URL tentée: $imageUrl');
+              return Container(
+                color: Colors.grey[900],
+                child: const Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.grey,
+                    size: 60,
                   ),
                 ),
               );
@@ -104,8 +71,9 @@ class ContentDetailsHeaderCached extends StatelessWidget {
                     contentDetails.title,
                     style: const TextStyle(
                       color: Colors.grey,
-                      fontSize: 18,
+                      fontSize: 16,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -190,21 +158,11 @@ class ContentDetailsHeaderCached extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              // Bouton Bande-annonce
-              if (contentDetails.trailerUrl != null)
-                IconButton(
-                  onPressed: () {
-                    // TODO: Lire la bande-annonce
-                  },
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.black.withOpacity(0.5),
-                  ),
-                  icon: const Icon(
-                    Icons.play_circle_outline,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
+              // Bouton Bande-annonce avec TrailerButton
+              TrailerButton(
+                trailerUrl: contentDetails.trailerUrl,
+                title: contentDetails.title,
+              ),
             ],
           ),
         ),

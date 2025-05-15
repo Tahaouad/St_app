@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
-import 'package:frontend_fo_application_streaming/presentation/widgets/contenttile.dart';
+import 'package:frontend_fo_application_streaming/presentation/widgets/ContentTile.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/content/content_details_screen.dart';
 
 class ContentSection extends StatelessWidget {
