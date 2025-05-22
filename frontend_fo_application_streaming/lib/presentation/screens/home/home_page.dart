@@ -43,10 +43,8 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadUserAndContent() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // Essayer de charger le profil utilisateur d'abord
     await authProvider.loadUserProfile();
 
-    // Charger le contenu seulement si l'utilisateur est authentifié
     if (authProvider.isAuthenticated) {
       await _loadContent();
     }

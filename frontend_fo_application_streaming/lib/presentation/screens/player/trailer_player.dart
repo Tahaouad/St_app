@@ -19,6 +19,7 @@ class TrailerPlayer extends StatefulWidget {
 
 class _TrailerPlayerState extends State<TrailerPlayer> {
   late YoutubePlayerController _controller;
+  bool _isPlayerReady = false;
 
   @override
   void initState() {
@@ -26,13 +27,14 @@ class _TrailerPlayerState extends State<TrailerPlayer> {
 
     // Forcer l'orientation paysage
     SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeRight,
       DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
     ]);
 
     // Masquer la barre de statut
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
 
+    // Extraire l'ID de la vidéo YouTube
     final videoId = YoutubePlayer.convertUrlToId(widget.youtubeUrl);
 
     _controller = YoutubePlayerController(
@@ -69,33 +71,51 @@ class _TrailerPlayerState extends State<TrailerPlayer> {
       body: Stack(
         children: [
           Center(
-            child: YoutubePlayer(
-              controller: _controller,
-              showVideoProgressIndicator: true,
-              progressIndicatorColor: AppColors.primary,
-              progressColors: const ProgressBarColors(
-                playedColor: AppColors.primary,
-                handleColor: AppColors.primary,
-              ),
-              onReady: () {
-                print('Player is ready.');
+            child: YoutubePlayerBuilder(
+              onExitFullScreen: () {
+                // Forcer l'orientation paysage quand on quitte le plein écran
+                SystemChrome.setPreferredOrientations([
+                  DeviceOrientation.landscapeLeft,
+                  DeviceOrientation.landscapeRight,
+                ]);
               },
-              onEnded: (data) {
-                Navigator.pop(context);
-              },
-              bottomActions: [
-                CurrentPosition(),
-                ProgressBar(
-                  isExpanded: true,
-                  colors: const ProgressBarColors(
-                    playedColor: AppColors.primary,
-                    handleColor: AppColors.primary,
-                  ),
+              player: YoutubePlayer(
+                controller: _controller,
+                showVideoProgressIndicator: true,
+                progressIndicatorColor: AppColors.primary,
+                progressColors: const ProgressBarColors(
+                  playedColor: AppColors.primary,
+                  handleColor: AppColors.primary,
                 ),
-                RemainingDuration(),
-                const PlaybackSpeedButton(),
-                FullScreenButton(),
-              ],
+                onReady: () {
+                  _isPlayerReady = true;
+                },
+                onEnded: (data) {
+                  Navigator.pop(context);
+                },
+                topActions: [
+                  const SizedBox(width: 8.0),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.0,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+                bottomActions: [
+                  CurrentPosition(),
+                  ProgressBar(isExpanded: true),
+                  RemainingDuration(),
+                  const PlaybackSpeedButton(),
+                  FullScreenButton(),
+                ],
+              ),
+              builder: (context, player) => player,
             ),
           ),
 
@@ -116,28 +136,6 @@ class _TrailerPlayerState extends State<TrailerPlayer> {
                   color: Colors.white,
                   size: 24,
                 ),
-              ),
-            ),
-          ),
-
-          // Titre de la vidéo
-          Positioned(
-            bottom: 80,
-            left: 20,
-            right: 20,
-            child: Text(
-              widget.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    blurRadius: 10.0,
-                    color: Colors.black,
-                    offset: Offset(2.0, 2.0),
-                  ),
-                ],
               ),
             ),
           ),

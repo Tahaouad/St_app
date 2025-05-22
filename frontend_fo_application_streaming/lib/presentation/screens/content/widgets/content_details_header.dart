@@ -1,8 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_details.dart';
-import 'package:frontend_fo_application_streaming/presentation/screens/player/youtube_player_page.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/player/trailer_player.dart';
 
 class ContentDetailsHeader extends StatelessWidget {
   final ContentDetails contentDetails;
@@ -15,8 +14,9 @@ class ContentDetailsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Prioriser backdropUrl, puis posterUrl
-    final String? imageUrl = contentDetails.backdropUrl ?? contentDetails.posterUrl;
-    
+    final String? imageUrl =
+        contentDetails.backdropUrl ?? contentDetails.posterUrl;
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -41,8 +41,6 @@ class ContentDetailsHeader extends StatelessWidget {
               );
             },
             errorBuilder: (context, error, stackTrace) {
-              print('Erreur de chargement de l\'image: $error');
-              print('URL tentée: $imageUrl');
               return Container(
                 color: Colors.grey[900],
                 child: const Center(
@@ -109,7 +107,7 @@ class ContentDetailsHeader extends StatelessWidget {
               // Bouton Lecture
               ElevatedButton.icon(
                 onPressed: () {
-                  // TODO: Implémenter la lecture
+                  // TODO: Implémenter la lecture du film/épisode complet
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -160,13 +158,14 @@ class ContentDetailsHeader extends StatelessWidget {
               const SizedBox(width: 12),
 
               // Bouton Bande-annonce
-              if (contentDetails.trailerUrl != null && contentDetails.trailerUrl!.isNotEmpty)
+              if (contentDetails.trailerUrl != null &&
+                  contentDetails.trailerUrl!.isNotEmpty)
                 IconButton(
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => YoutubePlayerPage(
+                        builder: (context) => TrailerPlayer(
                           title: contentDetails.title,
                           youtubeUrl: contentDetails.trailerUrl!,
                         ),

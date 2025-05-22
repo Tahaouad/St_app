@@ -33,8 +33,7 @@ class HomeAppBar extends StatelessWidget {
         IconButton(
           icon: const Icon(Icons.search, color: AppColors.textPrimary),
           onPressed: () {
-            // TODO: Implement search functionality
-          },
+            },
         ),
         IconButton(
           icon: CircleAvatar(

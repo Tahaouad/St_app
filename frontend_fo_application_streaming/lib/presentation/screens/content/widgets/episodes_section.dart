@@ -1,8 +1,8 @@
-// lib/presentation/screens/content/widgets/episodes_section.dart
-
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_details.dart';
+import 'package:frontend_fo_application_streaming/presentation/widgets/trailer_thumbnail.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/player/trailer_player.dart';
 
 class EpisodesSection extends StatefulWidget {
   final List<Season> seasons;
@@ -95,12 +95,27 @@ class _EpisodesSectionState extends State<EpisodesSection> {
   }
 
   Widget _buildEpisodeCard(Episode episode) {
+    // Vérifier si l'épisode a une URL vidéo YouTube
+    final bool hasYoutubeVideo = episode.videoUrl.contains('youtube.com') ||
+        episode.videoUrl.contains('youtu.be');
+
     return Card(
       color: Colors.grey[900],
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          // TODO: Naviguer vers la lecture de l'épisode
+          if (hasYoutubeVideo) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TrailerPlayer(
+                  title: '${episode.title} - Episode ${episode.episodeNumber}',
+                  youtubeUrl: episode.videoUrl,
+                ),
+              ),
+            );
+          }
+          // TODO: Gérer la lecture des épisodes non-YouTube
         },
         borderRadius: BorderRadius.circular(8),
         child: Padding(
@@ -108,40 +123,50 @@ class _EpisodesSectionState extends State<EpisodesSection> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Thumbnail
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: episode.thumbnailUrl != null
-                    ? Image.network(
-                        episode.thumbnailUrl!,
-                        width: 120,
-                        height: 68,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
+              // Thumbnail - utiliser TrailerThumbnail si c'est une vidéo YouTube
+              if (hasYoutubeVideo)
+                TrailerThumbnail(
+                  trailerUrl: episode.videoUrl,
+                  title: episode.title,
+                  width: 120,
+                  height: 68,
+                  showPlayButton: true,
+                )
+              else
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: episode.thumbnailUrl != null
+                      ? Image.network(
+                          episode.thumbnailUrl!,
+                          width: 120,
+                          height: 68,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            width: 120,
+                            height: 68,
+                            color: Colors.grey[800],
+                            child: const Icon(
+                              Icons.play_circle_outline,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        )
+                      : Container(
                           width: 120,
                           height: 68,
                           color: Colors.grey[800],
-                          child: const Icon(
-                            Icons.play_circle_outline,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        width: 120,
-                        height: 68,
-                        color: Colors.grey[800],
-                        child: Center(
-                          child: Text(
-                            'EP ${episode.episodeNumber}',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.bold,
+                          child: Center(
+                            child: Text(
+                              'EP ${episode.episodeNumber}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-              ),
+                ),
 
               const SizedBox(width: 12),
 
@@ -200,7 +225,19 @@ class _EpisodesSectionState extends State<EpisodesSection> {
               // Icône de lecture
               IconButton(
                 onPressed: () {
-                  // TODO: Lecture de l'épisode
+                  if (hasYoutubeVideo) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TrailerPlayer(
+                          title:
+                              '${episode.title} - Episode ${episode.episodeNumber}',
+                          youtubeUrl: episode.videoUrl,
+                        ),
+                      ),
+                    );
+                  }
+                  // TODO: Gérer la lecture des épisodes non-YouTube
                 },
                 icon: const Icon(
                   Icons.play_circle_filled,

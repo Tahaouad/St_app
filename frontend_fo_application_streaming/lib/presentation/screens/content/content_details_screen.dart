@@ -242,15 +242,13 @@ class _ContentDetailsScreenState extends State<ContentDetailsScreen>
                                     fontSize: 12,
                                   ),
                                 ),
-                                backgroundColor:
-                                    AppColors.primary.withOpacity(0.2),
-                                side: BorderSide(
-                                  color: AppColors.primary.withOpacity(0.5),
+                                backgroundColor: AppColors.primary,
+                                side: const BorderSide(
+                                  color: AppColors.primary,
                                 ),
                               ))
                           .toList(),
                     ),
-
                   const SizedBox(height: 24),
 
                   // Description
