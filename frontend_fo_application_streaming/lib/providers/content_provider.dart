@@ -1,761 +1,333 @@
-// lib/providers/content_provider.dart
+// lib/data/providers/content_provider.dart
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/api_models.dart';
-import '../services/api_service.dart';
-import 'auth_provider.dart';
+import 'package:flutter/foundation.dart';
+import '../../services/api_service.dart';
+import '../../core/models/content_item.dart';
 
-// ==========================================
-// CONTENT PROVIDERS
-// ==========================================
+class ContentProvider extends ChangeNotifier {
+  final ApiService _apiService = ApiService();
 
-// Provider pour les films populaires
-final popularMoviesProvider = FutureProvider.family<TMDBResponse<Movie>, int>((ref, page) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getPopularMovies(page: page);
-});
+  // États de chargement
+  bool _isLoading = false;
+  String? _error;
 
-// Provider pour les séries populaires
-final popularTVShowsProvider = FutureProvider.family<TMDBResponse<TVShow>, int>((ref, page) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getPopularTVShows(page: page);
-});
+  // Collections de contenu
+  List<ContentItem> _featuredContent = [];
+  List<ContentItem> _popularContent = [];
+  List<ContentItem> _trendingContent = [];
+  List<ContentItem> _newReleases = [];
+  List<ContentItem> _recommendedContent = [];
+  List<ContentItem> _movies = [];
+  List<ContentItem> _series = [];
 
-// Provider pour le contenu trending
-final trendingProvider = FutureProvider.family<TMDBResponse<dynamic>, TrendingParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getTrending(
-    type: params.type,
-    time: params.time,
-    page: params.page,
-  );
-});
+  // Getters
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  List<ContentItem> get featuredContent => _featuredContent;
+  List<ContentItem> get popularContent => _popularContent;
+  List<ContentItem> get trendingContent => _trendingContent;
+  List<ContentItem> get newReleases => _newReleases;
+  List<ContentItem> get recommendedContent => _recommendedContent;
+  List<ContentItem> get movies => _movies;
+  List<ContentItem> get series => _series;
 
-// Provider pour la recherche
-final searchProvider = FutureProvider.family<TMDBResponse<dynamic>, SearchParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.search(params.query, page: params.page);
-});
-
-// Provider pour les détails d'un film
-final movieDetailsProvider = FutureProvider.family<Movie, int>((ref, movieId) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getMovieDetails(movieId);
-});
-
-// Provider pour les détails d'une série
-final tvShowDetailsProvider = FutureProvider.family<TVShow, int>((ref, tvId) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getTVShowDetails(tvId);
-});
-
-// Provider pour les détails d'une saison
-final seasonDetailsProvider = FutureProvider.family<Season, SeasonParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getSeasonDetails(params.tvId, params.seasonNumber);
-});
-
-// Provider pour les genres
-final genresProvider = FutureProvider.family<List<Genre>, String>((ref, type) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getGenres(type: type);
-});
-
-// Provider pour l'URL de streaming
-final streamUrlProvider = FutureProvider.family<StreamResponse, StreamParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getStreamUrl(
-    params.type,
-    params.id,
-    season: params.season,
-    episode: params.episode,
-    subtitleLang: params.subtitleLang,
-  );
-});
-
-// ==========================================
-// USER DATA PROVIDERS
-// ==========================================
-
-// Provider pour la watchlist
-final watchlistProvider = FutureProvider.family<WatchlistResponse, WatchlistParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getWatchlist(
-    page: params.page,
-    limit: params.limit,
-    mediaType: params.mediaType,
-  );
-});
-
-// Provider pour vérifier si un élément est dans la watchlist
-final inWatchlistProvider = FutureProvider.family<bool, CheckWatchlistParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.checkInWatchlist(params.tmdbId, params.mediaType);
-});
-
-// Provider pour les notes de l'utilisateur
-final userRatingsProvider = FutureProvider.family<List<Rating>, RatingsParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getUserRatings(
-    page: params.page,
-    limit: params.limit,
-    mediaType: params.mediaType,
-    minRating: params.minRating,
-    maxRating: params.maxRating,
-  );
-});
-
-// Provider pour une note spécifique
-final userRatingProvider = FutureProvider.family<Rating?, UserRatingParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getUserRating(
-    params.tmdbId,
-    params.mediaType,
-    seasonNumber: params.seasonNumber,
-    episodeNumber: params.episodeNumber,
-  );
-});
-
-// Provider pour l'historique de visionnage
-final watchHistoryProvider = FutureProvider.family<List<WatchHistoryItem>, WatchHistoryParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getWatchHistory(
-    page: params.page,
-    limit: params.limit,
-    mediaType: params.mediaType,
-    completed: params.completed,
-  );
-});
-
-// Provider pour continuer le visionnage
-final continueWatchingProvider = FutureProvider.family<List<WatchHistoryItem>, int>((ref, limit) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getContinueWatching(limit: limit);
-});
-
-// Provider pour le progrès de visionnage
-final watchProgressProvider = FutureProvider.family<WatchProgress?, WatchProgressParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getWatchProgress(
-    params.tmdbId,
-    params.mediaType,
-    seasonNumber: params.seasonNumber,
-    episodeNumber: params.episodeNumber,
-  );
-});
-
-// Provider pour les statistiques utilisateur
-final userStatsProvider = FutureProvider<UserStats>((ref) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getUserStats();
-});
-
-// ==========================================
-// STATE NOTIFIERS POUR LES ACTIONS
-// ==========================================
-
-// Notifier pour gérer les actions de la watchlist
-class WatchlistNotifier extends StateNotifier<AsyncValue<void>> {
-  final ApiService _apiService;
-
-  WatchlistNotifier(this._apiService) : super(const AsyncValue.data(null));
-
-  Future<bool> addToWatchlist({
-    required int tmdbId,
-    required String mediaType,
-    required String title,
-    String? posterPath,
-  }) async {
+  // Charger tout le contenu
+  Future<void> loadAllContent() async {
     try {
-      state = const AsyncValue.loading();
-      
-      final request = AddToWatchlistRequest(
-        tmdbId: tmdbId,
-        mediaType: mediaType,
-        title: title,
-        posterPath: posterPath,
+      _setLoading(true);
+      _clearError();
+
+      await Future.wait([
+        _loadPopularContent(),
+        _loadTrendingContent(),
+        loadMovies(),
+        loadSeries(),
+        _loadUpcoming(),
+      ]);
+
+      // Créer le contenu featured à partir du trending
+      _createFeaturedContent();
+    } catch (error) {
+      _setError('Erreur lors du chargement du contenu: ${error.toString()}');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Charger le contenu populaire
+  Future<void> _loadPopularContent() async {
+    try {
+      // Charger films et séries populaires
+      final [moviesResponse, tvResponse] = await Future.wait([
+        _apiService.getPopularMovies(page: 1),
+        _apiService.getPopularTV(page: 1),
+      ]);
+
+      final List<ContentItem> popularItems = [];
+
+      // Traiter les films populaires
+      if (moviesResponse['results'] != null) {
+        for (var item in moviesResponse['results']) {
+          popularItems.add(_createContentItemFromMovie(item));
+        }
+      }
+
+      // Traiter les séries populaires
+      if (tvResponse['results'] != null) {
+        for (var item in tvResponse['results']) {
+          popularItems.add(_createContentItemFromTV(item));
+        }
+      }
+
+      // Mélanger et limiter
+      popularItems.shuffle();
+      _popularContent = popularItems.take(20).toList();
+    } catch (error) {
+      print('Erreur chargement contenu populaire: $error');
+    }
+  }
+
+  // Charger le contenu trending
+  Future<void> _loadTrendingContent() async {
+    try {
+      final response = await _apiService.getTrending(
+        type: 'all',
+        time: 'day',
+        page: 1,
       );
-      
-      await _apiService.addToWatchlist(request);
-      state = const AsyncValue.data(null);
-      return true;
+
+      final List<ContentItem> trendingItems = [];
+
+      if (response['results'] != null) {
+        for (var item in response['results']) {
+          if (item['media_type'] == 'movie') {
+            trendingItems.add(_createContentItemFromMovie(item));
+          } else if (item['media_type'] == 'tv') {
+            trendingItems.add(_createContentItemFromTV(item));
+          }
+        }
+      }
+
+      _trendingContent = trendingItems.take(20).toList();
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      print('Erreur chargement trending: $error');
     }
   }
 
-  Future<bool> removeFromWatchlist(int id) async {
+  // Charger les films
+  Future<void> loadMovies() async {
     try {
-      state = const AsyncValue.loading();
-      await _apiService.removeFromWatchlist(id);
-      state = const AsyncValue.data(null);
-      return true;
+      _setLoading(true);
+      _clearError();
+
+      final response = await _apiService.getPopularMovies(page: 1);
+      final List<ContentItem> movieItems = [];
+
+      if (response['results'] != null) {
+        for (var item in response['results']) {
+          movieItems.add(_createContentItemFromMovie(item));
+        }
+      }
+
+      _movies = movieItems;
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      _setError('Erreur lors du chargement des films: ${error.toString()}');
+    } finally {
+      _setLoading(false);
     }
   }
-}
 
-// Notifier pour gérer les notes
-class RatingNotifier extends StateNotifier<AsyncValue<void>> {
-  final ApiService _apiService;
-
-  RatingNotifier(this._apiService) : super(const AsyncValue.data(null));
-
-  Future<bool> addRating({
-    required int tmdbId,
-    required String mediaType,
-    required int rating,
-    required String title,
-    String? comment,
-    int? seasonNumber,
-    int? episodeNumber,
-  }) async {
+  // Charger les séries
+  Future<void> loadSeries() async {
     try {
-      state = const AsyncValue.loading();
-      
-      final request = AddRatingRequest(
-        tmdbId: tmdbId,
-        mediaType: mediaType,
-        rating: rating,
-        title: title,
-        comment: comment,
-        seasonNumber: seasonNumber,
-        episodeNumber: episodeNumber,
-      );
-      
-      await _apiService.addRating(request);
-      state = const AsyncValue.data(null);
-      return true;
+      _setLoading(true);
+      _clearError();
+
+      final response = await _apiService.getPopularTV(page: 1);
+      final List<ContentItem> seriesItems = [];
+
+      if (response['results'] != null) {
+        for (var item in response['results']) {
+          seriesItems.add(_createContentItemFromTV(item));
+        }
+      }
+
+      _series = seriesItems;
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      _setError('Erreur lors du chargement des séries: ${error.toString()}');
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<bool> deleteRating(int ratingId) async {
+  // Charger les nouveautés
+  Future<void> _loadUpcoming() async {
     try {
-      state = const AsyncValue.loading();
-      await _apiService.deleteRating(ratingId);
-      state = const AsyncValue.data(null);
-      return true;
+      final response = await _apiService.getUpcoming(page: 1);
+      final List<ContentItem> upcomingItems = [];
+
+      if (response['results'] != null) {
+        for (var item in response['results']) {
+          upcomingItems.add(_createContentItemFromMovie(item));
+        }
+      }
+
+      _newReleases = upcomingItems.take(15).toList();
+
+      // Créer du contenu recommandé à partir du top rated
+      await _loadRecommended();
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      print('Erreur chargement upcoming: $error');
     }
   }
-}
 
-// Notifier pour gérer l'historique de visionnage
-class WatchHistoryNotifier extends StateNotifier<AsyncValue<void>> {
-  final ApiService _apiService;
-
-  WatchHistoryNotifier(this._apiService) : super(const AsyncValue.data(null));
-
-  Future<bool> updateWatchHistory({
-    required int tmdbId,
-    required String mediaType,
-    required String title,
-    String? posterPath,
-    required int progress,
-    int? duration,
-    required bool completed,
-    int? seasonNumber,
-    int? episodeNumber,
-  }) async {
+  // Charger le contenu recommandé
+  Future<void> _loadRecommended() async {
     try {
-      state = const AsyncValue.loading();
-      
-      final request = UpdateWatchHistoryRequest(
-        tmdbId: tmdbId,
-        mediaType: mediaType,
-        title: title,
-        posterPath: posterPath,
-        progress: progress,
-        duration: duration,
-        completed: completed,
-        seasonNumber: seasonNumber,
-        episodeNumber: episodeNumber,
-      );
-      
-      await _apiService.updateWatchHistory(request);
-      state = const AsyncValue.data(null);
-      return true;
+      final response = await _apiService.getTopRated(type: 'movie', page: 1);
+      final List<ContentItem> recommendedItems = [];
+
+      if (response['results'] != null) {
+        for (var item in response['results']) {
+          recommendedItems.add(_createContentItemFromMovie(item));
+        }
+      }
+
+      _recommendedContent = recommendedItems.take(15).toList();
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      print('Erreur chargement recommandé: $error');
     }
   }
 
-  Future<bool> clearWatchHistory({String? mediaType, DateTime? beforeDate}) async {
+  // Créer le contenu featured
+  void _createFeaturedContent() {
+    // Prendre les meilleurs éléments du trending pour le featured
+    _featuredContent = _trendingContent.take(5).toList();
+  }
+
+  // Recherche
+  Future<List<ContentItem>> search(String query) async {
     try {
-      state = const AsyncValue.loading();
-      await _apiService.clearWatchHistory(mediaType: mediaType, beforeDate: beforeDate);
-      state = const AsyncValue.data(null);
-      return true;
+      final response = await _apiService.search(query, page: 1);
+      final List<ContentItem> searchResults = [];
+
+      if (response['results'] != null) {
+        for (var item in response['results']) {
+          if (item['media_type'] == 'movie') {
+            searchResults.add(_createContentItemFromMovie(item));
+          } else if (item['media_type'] == 'tv') {
+            searchResults.add(_createContentItemFromTV(item));
+          }
+        }
+      }
+
+      return searchResults;
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      throw Exception('Erreur de recherche: ${error.toString()}');
     }
   }
-}
 
-// Providers pour les notifiers
-final watchlistNotifierProvider = StateNotifierProvider<WatchlistNotifier, AsyncValue<void>>((ref) {
-  final apiService = ref.watch(apiServiceProvider);
-  return WatchlistNotifier(apiService);
-});
+  // Méthodes utilitaires pour créer des ContentItem
+  ContentItem _createContentItemFromMovie(Map<String, dynamic> movie) {
+    return ContentItem(
+      id: movie['id'] ?? 0,
+      title: movie['title'] ?? '',
+      description: movie['overview'] ?? '',
+      posterUrl: movie['poster_url'],
+      backdropUrl: movie['backdrop_url'],
+      rating: (movie['vote_average'] ?? 0.0).toDouble(),
+      releaseYear: _extractYear(movie['release_date']),
+      type: ContentType.movie,
+      genres: _extractGenres(movie['genre_ids']),
+    );
+  }
 
-// lib/providers/content_provider.dart
+  ContentItem _createContentItemFromTV(Map<String, dynamic> tv) {
+    return ContentItem(
+      id: tv['id'] ?? 0,
+      title: tv['name'] ?? tv['title'] ?? '',
+      description: tv['overview'] ?? '',
+      posterUrl: tv['poster_url'],
+      backdropUrl: tv['backdrop_url'],
+      rating: (tv['vote_average'] ?? 0.0).toDouble(),
+      releaseYear: _extractYear(tv['first_air_date']),
+      type: ContentType.series,
+      genres: _extractGenres(tv['genre_ids']),
+    );
+  }
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/api_models.dart';
-import '../services/api_service.dart';
-import 'auth_provider.dart';
-
-// ==========================================
-// CONTENT PROVIDERS
-// ==========================================
-
-// Provider pour les films populaires
-final popularMoviesProvider = FutureProvider.family<TMDBResponse<Movie>, int>((ref, page) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getPopularMovies(page: page);
-});
-
-// Provider pour les séries populaires
-final popularTVShowsProvider = FutureProvider.family<TMDBResponse<TVShow>, int>((ref, page) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getPopularTVShows(page: page);
-});
-
-// Provider pour le contenu trending
-final trendingProvider = FutureProvider.family<TMDBResponse<dynamic>, TrendingParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getTrending(
-    type: params.type,
-    time: params.time,
-    page: params.page,
-  );
-});
-
-// Provider pour la recherche
-final searchProvider = FutureProvider.family<TMDBResponse<dynamic>, SearchParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.search(params.query, page: params.page);
-});
-
-// Provider pour les détails d'un film
-final movieDetailsProvider = FutureProvider.family<Movie, int>((ref, movieId) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getMovieDetails(movieId);
-});
-
-// Provider pour les détails d'une série
-final tvShowDetailsProvider = FutureProvider.family<TVShow, int>((ref, tvId) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getTVShowDetails(tvId);
-});
-
-// Provider pour les détails d'une saison
-final seasonDetailsProvider = FutureProvider.family<Season, SeasonParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getSeasonDetails(params.tvId, params.seasonNumber);
-});
-
-// Provider pour les genres
-final genresProvider = FutureProvider.family<List<Genre>, String>((ref, type) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getGenres(type: type);
-});
-
-// Provider pour l'URL de streaming
-final streamUrlProvider = FutureProvider.family<StreamResponse, StreamParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getStreamUrl(
-    params.type,
-    params.id,
-    season: params.season,
-    episode: params.episode,
-    subtitleLang: params.subtitleLang,
-  );
-});
-
-// ==========================================
-// USER DATA PROVIDERS
-// ==========================================
-
-// Provider pour la watchlist
-final watchlistProvider = FutureProvider.family<WatchlistResponse, WatchlistParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getWatchlist(
-    page: params.page,
-    limit: params.limit,
-    mediaType: params.mediaType,
-  );
-});
-
-// Provider pour vérifier si un élément est dans la watchlist
-final inWatchlistProvider = FutureProvider.family<bool, CheckWatchlistParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.checkInWatchlist(params.tmdbId, params.mediaType);
-});
-
-// Provider pour les notes de l'utilisateur
-final userRatingsProvider = FutureProvider.family<List<Rating>, RatingsParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getUserRatings(
-    page: params.page,
-    limit: params.limit,
-    mediaType: params.mediaType,
-    minRating: params.minRating,
-    maxRating: params.maxRating,
-  );
-});
-
-// Provider pour une note spécifique
-final userRatingProvider = FutureProvider.family<Rating?, UserRatingParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getUserRating(
-    params.tmdbId,
-    params.mediaType,
-    seasonNumber: params.seasonNumber,
-    episodeNumber: params.episodeNumber,
-  );
-});
-
-// Provider pour l'historique de visionnage
-final watchHistoryProvider = FutureProvider.family<List<WatchHistoryItem>, WatchHistoryParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getWatchHistory(
-    page: params.page,
-    limit: params.limit,
-    mediaType: params.mediaType,
-    completed: params.completed,
-  );
-});
-
-// Provider pour continuer le visionnage
-final continueWatchingProvider = FutureProvider.family<List<WatchHistoryItem>, int>((ref, limit) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getContinueWatching(limit: limit);
-});
-
-// Provider pour le progrès de visionnage
-final watchProgressProvider = FutureProvider.family<WatchProgress?, WatchProgressParams>((ref, params) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getWatchProgress(
-    params.tmdbId,
-    params.mediaType,
-    seasonNumber: params.seasonNumber,
-    episodeNumber: params.episodeNumber,
-  );
-});
-
-// Provider pour les statistiques utilisateur
-final userStatsProvider = FutureProvider<UserStats>((ref) async {
-  final apiService = ref.watch(apiServiceProvider);
-  return await apiService.getUserStats();
-});
-
-// ==========================================
-// STATE NOTIFIERS POUR LES ACTIONS
-// ==========================================
-
-// Notifier pour gérer les actions de la watchlist
-class WatchlistNotifier extends StateNotifier<AsyncValue<void>> {
-  final ApiService _apiService;
-
-  WatchlistNotifier(this._apiService) : super(const AsyncValue.data(null));
-
-  Future<bool> addToWatchlist({
-    required int tmdbId,
-    required String mediaType,
-    required String title,
-    String? posterPath,
-  }) async {
+  // Extraire l'année à partir d'une date
+  int _extractYear(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return 0;
     try {
-      state = const AsyncValue.loading();
-      
-      final request = AddToWatchlistRequest(
-        tmdbId: tmdbId,
-        mediaType: mediaType,
-        title: title,
-        posterPath: posterPath,
-      );
-      
-      await _apiService.addToWatchlist(request);
-      state = const AsyncValue.data(null);
-      return true;
-    } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      return DateTime.parse(dateString).year;
+    } catch (e) {
+      return 0;
     }
   }
 
-  Future<bool> removeFromWatchlist(int id) async {
+  // Extraire les genres (placeholder - vous pourriez charger la liste des genres)
+  List<String> _extractGenres(List<dynamic>? genreIds) {
+    // Pour l'instant, retourner une liste vide
+    // Vous pourriez implémenter un mapping des IDs vers les noms de genres
+    return [];
+  }
+
+  // Méthodes utilitaires privées
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _error = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  // Rafraîchir tout le contenu
+  Future<void> refresh() async {
+    await loadAllContent();
+  }
+
+  // Charger plus de contenu pour une catégorie spécifique
+  Future<void> loadMoreMovies({int page = 2}) async {
     try {
-      state = const AsyncValue.loading();
-      await _apiService.removeFromWatchlist(id);
-      state = const AsyncValue.data(null);
-      return true;
+      final response = await _apiService.getPopularMovies(page: page);
+      final List<ContentItem> moreMovies = [];
+
+      if (response['results'] != null) {
+        for (var item in response['results']) {
+          moreMovies.add(_createContentItemFromMovie(item));
+        }
+      }
+
+      _movies.addAll(moreMovies);
+      notifyListeners();
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      print('Erreur chargement plus de films: $error');
     }
   }
-}
 
-// Notifier pour gérer les notes
-class RatingNotifier extends StateNotifier<AsyncValue<void>> {
-  final ApiService _apiService;
-
-  RatingNotifier(this._apiService) : super(const AsyncValue.data(null));
-
-  Future<bool> addRating({
-    required int tmdbId,
-    required String mediaType,
-    required int rating,
-    required String title,
-    String? comment,
-    int? seasonNumber,
-    int? episodeNumber,
-  }) async {
+  Future<void> loadMoreSeries({int page = 2}) async {
     try {
-      state = const AsyncValue.loading();
-      
-      final request = AddRatingRequest(
-        tmdbId: tmdbId,
-        mediaType: mediaType,
-        rating: rating,
-        title: title,
-        comment: comment,
-        seasonNumber: seasonNumber,
-        episodeNumber: episodeNumber,
-      );
-      
-      await _apiService.addRating(request);
-      state = const AsyncValue.data(null);
-      return true;
+      final response = await _apiService.getPopularTV(page: page);
+      final List<ContentItem> moreSeries = [];
+
+      if (response['results'] != null) {
+        for (var item in response['results']) {
+          moreSeries.add(_createContentItemFromTV(item));
+        }
+      }
+
+      _series.addAll(moreSeries);
+      notifyListeners();
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
+      print('Erreur chargement plus de séries: $error');
     }
   }
-
-  Future<bool> deleteRating(int ratingId) async {
-    try {
-      state = const AsyncValue.loading();
-      await _apiService.deleteRating(ratingId);
-      state = const AsyncValue.data(null);
-      return true;
-    } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
-    }
-  }
-}
-
-// Notifier pour gérer l'historique de visionnage
-class WatchHistoryNotifier extends StateNotifier<AsyncValue<void>> {
-  final ApiService _apiService;
-
-  WatchHistoryNotifier(this._apiService) : super(const AsyncValue.data(null));
-
-  Future<bool> updateWatchHistory({
-    required int tmdbId,
-    required String mediaType,
-    required String title,
-    String? posterPath,
-    required int progress,
-    int? duration,
-    required bool completed,
-    int? seasonNumber,
-    int? episodeNumber,
-  }) async {
-    try {
-      state = const AsyncValue.loading();
-      
-      final request = UpdateWatchHistoryRequest(
-        tmdbId: tmdbId,
-        mediaType: mediaType,
-        title: title,
-        posterPath: posterPath,
-        progress: progress,
-        duration: duration,
-        completed: completed,
-        seasonNumber: seasonNumber,
-        episodeNumber: episodeNumber,
-      );
-      
-      await _apiService.updateWatchHistory(request);
-      state = const AsyncValue.data(null);
-      return true;
-    } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
-    }
-  }
-
-  Future<bool> clearWatchHistory({String? mediaType, DateTime? beforeDate}) async {
-    try {
-      state = const AsyncValue.loading();
-      await _apiService.clearWatchHistory(mediaType: mediaType, beforeDate: beforeDate);
-      state = const AsyncValue.data(null);
-      return true;
-    } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-      return false;
-    }
-  }
-}
-
-// Providers pour les notifiers
-final watchlistNotifierProvider = StateNotifierProvider<WatchlistNotifier, AsyncValue<void>>((ref) {
-  final apiService = ref.watch(apiServiceProvider);
-  return WatchlistNotifier(apiService);
-});
-
-final ratingNotifierProvider = StateNotifierProvider<RatingNotifier, AsyncValue<void>>((ref) {
-  final apiService = ref.watch(apiServiceProvider);
-  return RatingNotifier(apiService);
-});
-
-final watchHistoryNotifierProvider = StateNotifierProvider<WatchHistoryNotifier, AsyncValue<void>>((ref) {
-  final apiService = ref.watch(apiServiceProvider);
-  return WatchHistoryNotifier(apiService);
-});
-
-// ==========================================
-// PARAMETER CLASSES
-// ==========================================
-
-class TrendingParams {
-  final String type;
-  final String time;
-  final int page;
-
-  TrendingParams({
-    required this.type,
-    required this.time,
-    required this.page,
-  });
-}
-
-class SearchParams {
-  final String query;
-  final int page;
-
-  SearchParams({
-    required this.query,
-    required this.page,
-  });
-}
-
-class SeasonParams {
-  final int tvId;
-  final int seasonNumber;
-
-  SeasonParams({
-    required this.tvId,
-    required this.seasonNumber,
-  });
-}
-
-class StreamParams {
-  final String type;
-  final int id;
-  final int? season;
-  final int? episode;
-  final String? subtitleLang;
-
-  StreamParams({
-    required this.type,
-    required this.id,
-    this.season,
-    this.episode,
-    this.subtitleLang,
-  });
-}
-
-class WatchlistParams {
-  final int page;
-  final int limit;
-  final String? mediaType;
-
-  WatchlistParams({
-    required this.page,
-    required this.limit,
-    this.mediaType,
-  });
-}
-
-class CheckWatchlistParams {
-  final int tmdbId;
-  final String mediaType;
-
-  CheckWatchlistParams({
-    required this.tmdbId,
-    required this.mediaType,
-  });
-}
-
-class RatingsParams {
-  final int page;
-  final int limit;
-  final String? mediaType;
-  final int? minRating;
-  final int? maxRating;
-
-  RatingsParams({
-    required this.page,
-    required this.limit,
-    this.mediaType,
-    this.minRating,
-    this.maxRating,
-  });
-}
-
-class UserRatingParams {
-  final int tmdbId;
-  final String mediaType;
-  final int? seasonNumber;
-  final int? episodeNumber;
-
-  UserRatingParams({
-    required this.tmdbId,
-    required this.mediaType,
-    this.seasonNumber,
-    this.episodeNumber,
-  });
-}
-
-class WatchHistoryParams {
-  final int page;
-  final int limit;
-  final String? mediaType;
-  final bool? completed;
-
-  WatchHistoryParams({
-    required this.page,
-    required this.limit,
-    this.mediaType,
-    this.completed,
-  });
-}
-
-class WatchProgressParams {
-  final int tmdbId;
-  final String mediaType;
-  final int? seasonNumber;
-  final int? episodeNumber;
-
-  WatchProgressParams({
-    required this.tmdbId,
-    required this.mediaType,
-    this.seasonNumber,
-    this.episodeNumber,
-  });
 }

@@ -1,14 +1,12 @@
-// lib/services/api_service.dart
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../models/api_models.dart';
+import '../core/models/api_models.dart';
 
 class ApiService {
-  static const String baseUrl =
-      'http://localhost:5000/api'; // Changez selon votre config
+  static const String baseUrl = 'http://localhost:5000/api'; // Votre backend
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
   // Headers par défaut
@@ -46,7 +44,7 @@ class ApiService {
   }
 
   // ==========================================
-  // AUTHENTIFICATION
+  // AUTHENTIFICATION (adaptée à votre backend)
   // ==========================================
 
   Future<AuthResponse> register(RegisterRequest request) async {
@@ -62,14 +60,21 @@ class ApiService {
       _handleError(response);
 
       final data = json.decode(response.body);
-      final authResponse = AuthResponse.fromJson(data);
+      
+      // Adaptation à votre structure de réponse
+      final user = User.fromJson(data['user']);
+      final authResponse = AuthResponse(
+        token: 'dummy_token', // Votre backend ne retourne pas de token dans register
+        user: user,
+        message: data['message'],
+      );
 
-      // Sauvegarder le token et les données utilisateur
-      await _storage.write(key: 'auth_token', value: authResponse.token);
-      await _storage.write(
-          key: 'user_data', value: json.encode(authResponse.user.toJson()));
-
-      return authResponse;
+      // Après l'inscription, faire la connexion
+      final loginRequest = LoginRequest(
+        email: request.email,
+        password: request.password,
+      );
+      return await login(loginRequest);
     } catch (e) {
       throw _handleNetworkError(e);
     }
@@ -124,50 +129,11 @@ class ApiService {
     }
   }
 
-  Future<void> logout() async {
-    try {
-      // Supprimer toutes les données stockées
-      await _storage.deleteAll();
-    } catch (e) {
-      // En cas d'erreur, on supprime quand même les données locales
-      await _storage.deleteAll();
-    }
-  }
-
-  Future<bool> isLoggedIn() async {
-    try {
-      final token = await _storage.read(key: 'auth_token');
-      return token != null && token.isNotEmpty;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<User?> getCurrentUser() async {
-    try {
-      final userData = await _storage.read(key: 'user_data');
-      if (userData != null && userData.isNotEmpty) {
-        return User.fromJson(json.decode(userData));
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<String?> getAuthToken() async {
-    try {
-      return await _storage.read(key: 'auth_token');
-    } catch (e) {
-      return null;
-    }
-  }
-
   // ==========================================
-  // CONTENU (TMDB)
+  // CONTENU TMDB (adaptées à votre backend)
   // ==========================================
 
-  Future<TMDBResponse<dynamic>> search(String query, {int page = 1}) async {
+  Future<Map<String, dynamic>> search(String query, {int page = 1}) async {
     try {
       final response = await http
           .get(
@@ -181,24 +147,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return TMDBResponse.fromJson(data, (json) {
-        if (json is Map<String, dynamic>) {
-          final mediaType = json['media_type'] as String?;
-          if (mediaType == 'movie') {
-            return Movie.fromJson(json);
-          } else if (mediaType == 'tv') {
-            return TVShow.fromJson(json);
-          }
-        }
-        return json;
-      });
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<TMDBResponse<Movie>> getPopularMovies({int page = 1}) async {
+  Future<Map<String, dynamic>> getPopularMovies({int page = 1}) async {
     try {
       final response = await http
           .get(
@@ -212,15 +167,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return TMDBResponse.fromJson(
-          data, (json) => Movie.fromJson(json as Map<String, dynamic>));
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<TMDBResponse<TVShow>> getPopularTVShows({int page = 1}) async {
+  Future<Map<String, dynamic>> getPopularTV({int page = 1}) async {
     try {
       final response = await http
           .get(
@@ -234,15 +187,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return TMDBResponse.fromJson(
-          data, (json) => TVShow.fromJson(json as Map<String, dynamic>));
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<TMDBResponse<dynamic>> getTrending({
+  Future<Map<String, dynamic>> getTrending({
     String type = 'all',
     String time = 'day',
     int page = 1,
@@ -261,24 +212,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return TMDBResponse.fromJson(data, (json) {
-        if (json is Map<String, dynamic>) {
-          final mediaType = json['media_type'] as String?;
-          if (mediaType == 'movie') {
-            return Movie.fromJson(json);
-          } else if (mediaType == 'tv') {
-            return TVShow.fromJson(json);
-          }
-        }
-        return json;
-      });
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<TMDBResponse<dynamic>> getTopRated({
+  Future<Map<String, dynamic>> getTopRated({
     String type = 'movie',
     int page = 1,
   }) async {
@@ -295,24 +235,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return TMDBResponse.fromJson(data, (json) {
-        if (json is Map<String, dynamic>) {
-          final mediaType = json['media_type'] ?? type;
-          if (mediaType == 'movie') {
-            return Movie.fromJson(json);
-          } else if (mediaType == 'tv') {
-            return TVShow.fromJson(json);
-          }
-        }
-        return json;
-      });
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<TMDBResponse<Movie>> getUpcoming({int page = 1}) async {
+  Future<Map<String, dynamic>> getUpcoming({int page = 1}) async {
     try {
       final response = await http
           .get(
@@ -325,15 +254,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return TMDBResponse.fromJson(
-          data, (json) => Movie.fromJson(json as Map<String, dynamic>));
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<Movie> getMovieDetails(int movieId) async {
+  Future<Map<String, dynamic>> getMovieDetails(int movieId) async {
     try {
       final response = await http
           .get(
@@ -344,14 +271,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return Movie.fromJson(data);
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<TVShow> getTVShowDetails(int tvId) async {
+  Future<Map<String, dynamic>> getTVDetails(int tvId) async {
     try {
       final response = await http
           .get(
@@ -362,14 +288,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return TVShow.fromJson(data);
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<Season> getSeasonDetails(int tvId, int seasonNumber) async {
+  Future<Map<String, dynamic>> getSeasonDetails(int tvId, int seasonNumber) async {
     try {
       final response = await http
           .get(
@@ -380,14 +305,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return Season.fromJson(data);
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<Episode> getEpisodeDetails(
+  Future<Map<String, dynamic>> getEpisodeDetails(
       int tvId, int seasonNumber, int episodeNumber) async {
     try {
       final response = await http
@@ -400,14 +324,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return Episode.fromJson(data);
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<List<Genre>> getGenres({String type = 'movie'}) async {
+  Future<Map<String, dynamic>> getGenres({String type = 'movie'}) async {
     try {
       final response = await http
           .get(
@@ -420,16 +343,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      final genres =
-          (data['genres'] as List).map((json) => Genre.fromJson(json)).toList();
-      return genres;
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<TMDBResponse<dynamic>> discoverByGenre(
+  Future<Map<String, dynamic>> discoverByGenre(
     int genreId, {
     String type = 'movie',
     int page = 1,
@@ -448,17 +368,7 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return TMDBResponse.fromJson(data, (json) {
-        if (json is Map<String, dynamic>) {
-          if (type == 'movie') {
-            return Movie.fromJson(json);
-          } else if (type == 'tv') {
-            return TVShow.fromJson(json);
-          }
-        }
-        return json;
-      });
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
@@ -495,7 +405,7 @@ class ApiService {
   }
 
   // ==========================================
-  // WATCHLIST
+  // WATCHLIST (adaptées à votre backend)
   // ==========================================
 
   Future<WatchlistResponse> getWatchlist({
@@ -588,7 +498,7 @@ class ApiService {
   }
 
   // ==========================================
-  // RATINGS
+  // RATINGS (adaptées à votre backend)
   // ==========================================
 
   Future<Rating> addRating(AddRatingRequest request) async {
@@ -610,7 +520,7 @@ class ApiService {
     }
   }
 
-  Future<RatingsResponse> getUserRatings({
+  Future<Map<String, dynamic>> getUserRatings({
     int page = 1,
     int limit = 20,
     String? mediaType,
@@ -640,8 +550,7 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return RatingsResponse.fromJson(data);
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
@@ -696,7 +605,7 @@ class ApiService {
   }
 
   // ==========================================
-  // WATCH HISTORY
+  // WATCH HISTORY (adaptées à votre backend)
   // ==========================================
 
   Future<WatchHistoryItem> updateWatchHistory(
@@ -719,7 +628,7 @@ class ApiService {
     }
   }
 
-  Future<WatchHistoryResponse> getWatchHistory({
+  Future<Map<String, dynamic>> getWatchHistory({
     int page = 1,
     int limit = 20,
     String? mediaType,
@@ -747,14 +656,13 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return WatchHistoryResponse.fromJson(data);
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
   }
 
-  Future<WatchProgress?> getWatchProgress(
+  Future<Map<String, dynamic>?> getWatchProgress(
     int tmdbId,
     String mediaType, {
     int? seasonNumber,
@@ -781,9 +689,7 @@ class ApiService {
       _handleError(response);
 
       final data = json.decode(response.body);
-      return data['progress'] != null
-          ? WatchProgress.fromJson(data['progress'])
-          : null;
+      return data['progress'];
     } catch (e) {
       throw _handleNetworkError(e);
     }
@@ -834,10 +740,10 @@ class ApiService {
   }
 
   // ==========================================
-  // USER STATS
+  // USER STATS (adaptées à votre backend)
   // ==========================================
 
-  Future<UserStats> getUserStats() async {
+  Future<Map<String, dynamic>> getUserStats() async {
     try {
       final response = await http
           .get(
@@ -848,8 +754,7 @@ class ApiService {
 
       _handleError(response);
 
-      final data = json.decode(response.body);
-      return UserStats.fromJson(data);
+      return json.decode(response.body);
     } catch (e) {
       throw _handleNetworkError(e);
     }
@@ -878,6 +783,45 @@ class ApiService {
   // UTILITY METHODS
   // ==========================================
 
+  Future<bool> isLoggedIn() async {
+    try {
+      final token = await _storage.read(key: 'auth_token');
+      return token != null && token.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<User?> getCurrentUser() async {
+    try {
+      final userData = await _storage.read(key: 'user_data');
+      if (userData != null && userData.isNotEmpty) {
+        return User.fromJson(json.decode(userData));
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<String?> getAuthToken() async {
+    try {
+      return await _storage.read(key: 'auth_token');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      // Supprimer toutes les données stockées
+      await _storage.deleteAll();
+    } catch (e) {
+      // En cas d'erreur, on supprime quand même les données locales
+      await _storage.deleteAll();
+    }
+  }
+
   Exception _handleNetworkError(dynamic error) {
     if (error is SocketException) {
       return NetworkException(
@@ -904,277 +848,6 @@ class ApiService {
     if (path == null || path.isEmpty) return '';
     return 'https://image.tmdb.org/t/p/$size$path';
   }
-
-  // Helper pour formater la durée
-  static String formatDuration(int? runtime) {
-    if (runtime == null || runtime == 0) return '';
-    final hours = runtime ~/ 60;
-    final minutes = runtime % 60;
-    if (hours > 0) {
-      return '${hours}h ${minutes}min';
-    } else {
-      return '${minutes}min';
-    }
-  }
-
-  // Helper pour formater les dates
-  static String formatDate(String? dateString) {
-    if (dateString == null || dateString.isEmpty) return '';
-    try {
-      final date = DateTime.parse(dateString);
-      return '${date.day}/${date.month}/${date.year}';
-    } catch (e) {
-      return dateString;
-    }
-  }
-
-  // Helper pour formater les notes
-  static String formatRating(double? rating) {
-    if (rating == null) return '';
-    return rating.toStringAsFixed(1);
-  }
-}
-
-// ==========================================
-// MODÈLES DE RÉPONSE ADDITIONNELS
-// ==========================================
-
-@JsonSerializable()
-class RatingsResponse {
-  final List<Rating> ratings;
-  final Pagination pagination;
-  final RatingsStats stats;
-
-  RatingsResponse({
-    required this.ratings,
-    required this.pagination,
-    required this.stats,
-  });
-
-  factory RatingsResponse.fromJson(Map<String, dynamic> json) =>
-      _$RatingsResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$RatingsResponseToJson(this);
-}
-
-@JsonSerializable()
-class RatingsStats {
-  @JsonKey(name: 'averageRating')
-  final String averageRating;
-  @JsonKey(name: 'totalRatings')
-  final int totalRatings;
-  @JsonKey(name: 'ratingDistribution')
-  final List<RatingDistribution> ratingDistribution;
-
-  RatingsStats({
-    required this.averageRating,
-    required this.totalRatings,
-    required this.ratingDistribution,
-  });
-
-  factory RatingsStats.fromJson(Map<String, dynamic> json) =>
-      _$RatingsStatsFromJson(json);
-  Map<String, dynamic> toJson() => _$RatingsStatsToJson(this);
-}
-
-@JsonSerializable()
-class RatingDistribution {
-  final int rating;
-  final int count;
-
-  RatingDistribution({
-    required this.rating,
-    required this.count,
-  });
-
-  factory RatingDistribution.fromJson(Map<String, dynamic> json) =>
-      _$RatingDistributionFromJson(json);
-  Map<String, dynamic> toJson() => _$RatingDistributionToJson(this);
-}
-
-@JsonSerializable()
-class WatchHistoryResponse {
-  final List<WatchHistoryItem> history;
-  final Pagination pagination;
-  final WatchHistoryStatsResponse stats;
-
-  WatchHistoryResponse({
-    required this.history,
-    required this.pagination,
-    required this.stats,
-  });
-
-  factory WatchHistoryResponse.fromJson(Map<String, dynamic> json) =>
-      _$WatchHistoryResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$WatchHistoryResponseToJson(this);
-}
-
-@JsonSerializable()
-class WatchHistoryStatsResponse {
-  @JsonKey(name: 'totalWatched')
-  final int totalWatched;
-  @JsonKey(name: 'completedCount')
-  final int completedCount;
-  @JsonKey(name: 'inProgressCount')
-  final int inProgressCount;
-  @JsonKey(name: 'totalWatchTime')
-  final int totalWatchTime;
-
-  WatchHistoryStatsResponse({
-    required this.totalWatched,
-    required this.completedCount,
-    required this.inProgressCount,
-    required this.totalWatchTime,
-  });
-
-  factory WatchHistoryStatsResponse.fromJson(Map<String, dynamic> json) =>
-      _$WatchHistoryStatsResponseFromJson(json);
-  Map<String, dynamic> toJson() => _$WatchHistoryStatsResponseToJson(this);
-}
-
-@JsonSerializable()
-class WatchProgress {
-  final int progress;
-  final int? duration;
-  final bool completed;
-  @JsonKey(name: 'progressPercentage')
-  final int progressPercentage;
-  @JsonKey(name: 'lastWatchedAt')
-  final DateTime lastWatchedAt;
-  @JsonKey(name: 'remainingTime')
-  final int? remainingTime;
-
-  WatchProgress({
-    required this.progress,
-    this.duration,
-    required this.completed,
-    required this.progressPercentage,
-    required this.lastWatchedAt,
-    this.remainingTime,
-  });
-
-  factory WatchProgress.fromJson(Map<String, dynamic> json) =>
-      _$WatchProgressFromJson(json);
-  Map<String, dynamic> toJson() => _$WatchProgressToJson(this);
-}
-
-@JsonSerializable()
-class UserStats {
-  final GeneralStats general;
-  final Map<String, int> watchlist;
-  final Map<String, WatchHistoryStats> watchHistory;
-  @JsonKey(name: 'recentActivity')
-  final RecentActivity recentActivity;
-
-  UserStats({
-    required this.general,
-    required this.watchlist,
-    required this.watchHistory,
-    required this.recentActivity,
-  });
-
-  factory UserStats.fromJson(Map<String, dynamic> json) =>
-      _$UserStatsFromJson(json);
-  Map<String, dynamic> toJson() => _$UserStatsToJson(this);
-}
-
-@JsonSerializable()
-class GeneralStats {
-  @JsonKey(name: 'watchlistItems')
-  final int watchlistItems;
-  @JsonKey(name: 'ratingsGiven')
-  final int ratingsGiven;
-  @JsonKey(name: 'itemsWatched')
-  final int itemsWatched;
-  @JsonKey(name: 'totalWatchTimeSeconds')
-  final int totalWatchTimeSeconds;
-  @JsonKey(name: 'totalWatchTimeHours')
-  final int totalWatchTimeHours;
-  @JsonKey(name: 'averageRating')
-  final String averageRating;
-
-  GeneralStats({
-    required this.watchlistItems,
-    required this.ratingsGiven,
-    required this.itemsWatched,
-    required this.totalWatchTimeSeconds,
-    required this.totalWatchTimeHours,
-    required this.averageRating,
-  });
-
-  factory GeneralStats.fromJson(Map<String, dynamic> json) =>
-      _$GeneralStatsFromJson(json);
-  Map<String, dynamic> toJson() => _$GeneralStatsToJson(this);
-}
-
-@JsonSerializable()
-class WatchHistoryStats {
-  final int count;
-  @JsonKey(name: 'totalTime')
-  final int totalTime;
-
-  WatchHistoryStats({
-    required this.count,
-    required this.totalTime,
-  });
-
-  factory WatchHistoryStats.fromJson(Map<String, dynamic> json) =>
-      _$WatchHistoryStatsFromJson(json);
-  Map<String, dynamic> toJson() => _$WatchHistoryStatsToJson(this);
-}
-
-@JsonSerializable()
-class RecentActivity {
-  @JsonKey(name: 'lastWatchlistAddition')
-  final RecentItem? lastWatchlistAddition;
-  @JsonKey(name: 'lastWatched')
-  final RecentItem? lastWatched;
-  @JsonKey(name: 'lastRating')
-  final RecentRating? lastRating;
-
-  RecentActivity({
-    this.lastWatchlistAddition,
-    this.lastWatched,
-    this.lastRating,
-  });
-
-  factory RecentActivity.fromJson(Map<String, dynamic> json) =>
-      _$RecentActivityFromJson(json);
-  Map<String, dynamic> toJson() => _$RecentActivityToJson(this);
-}
-
-@JsonSerializable()
-class RecentItem {
-  final String title;
-  @JsonKey(name: 'mediaType')
-  final String mediaType;
-  final DateTime addedAt;
-
-  RecentItem({
-    required this.title,
-    required this.mediaType,
-    required this.addedAt,
-  });
-
-  factory RecentItem.fromJson(Map<String, dynamic> json) =>
-      _$RecentItemFromJson(json);
-  Map<String, dynamic> toJson() => _$RecentItemToJson(this);
-}
-
-@JsonSerializable()
-class RecentRating {
-  final String title;
-  final int rating;
-  final DateTime updatedAt;
-
-  RecentRating({
-    required this.title,
-    required this.rating,
-    required this.updatedAt,
-  });
-
-  factory RecentRating.fromJson(Map<String, dynamic> json) =>
-      _$RecentRatingFromJson(json);
-  Map<String, dynamic> toJson() => _$RecentRatingToJson(this);
 }
 
 // ==========================================
@@ -1208,134 +881,4 @@ class NetworkException implements Exception {
 
   @override
   String toString() => 'NetworkException: $message';
-}
-
-class ValidationException implements Exception {
-  final String message;
-  final Map<String, List<String>>? fieldErrors;
-
-  ValidationException(this.message, {this.fieldErrors});
-
-  @override
-  String toString() => 'ValidationException: $message';
-}
-
-// ==========================================
-// CONSTANTS
-// ==========================================
-
-class ApiConstants {
-  static const String tmdbImageBaseUrl = 'https://image.tmdb.org/t/p/';
-
-  // Tailles d'images TMDB
-  static const String posterSizeSmall = 'w154';
-  static const String posterSizeMedium = 'w342';
-  static const String posterSizeLarge = 'w500';
-  static const String posterSizeOriginal = 'original';
-
-  static const String backdropSizeSmall = 'w300';
-  static const String backdropSizeMedium = 'w780';
-  static const String backdropSizeLarge = 'w1280';
-  static const String backdropSizeOriginal = 'original';
-
-  static const String profileSizeSmall = 'w185';
-  static const String profileSizeLarge = 'h632';
-  static const String profileSizeOriginal = 'original';
-
-  static const String stillSizeSmall = 'w185';
-  static const String stillSizeMedium = 'w300';
-  static const String stillSizeOriginal = 'original';
-
-  // Timeout
-  static const Duration defaultTimeout = Duration(seconds: 30);
-  static const Duration uploadTimeout = Duration(minutes: 5);
-
-  // Pagination
-  static const int defaultPageSize = 20;
-  static const int maxPageSize = 100;
-
-  // Media types
-  static const String mediaTypeMovie = 'movie';
-  static const String mediaTypeTV = 'tv';
-  static const String mediaTypeEpisode = 'episode';
-
-  // Trending time windows
-  static const String trendingDay = 'day';
-  static const String trendingWeek = 'week';
-
-  // Sort orders
-  static const String sortAsc = 'ASC';
-  static const String sortDesc = 'DESC';
-}
-
-// ==========================================
-// HELPER EXTENSIONS
-// ==========================================
-
-extension ApiResponseHelpers on http.Response {
-  bool get isSuccess => statusCode >= 200 && statusCode < 300;
-  bool get isClientError => statusCode >= 400 && statusCode < 500;
-  bool get isServerError => statusCode >= 500;
-
-  Map<String, dynamic> get jsonBody {
-    try {
-      return json.decode(body) as Map<String, dynamic>;
-    } catch (e) {
-      throw FormatException('Invalid JSON response: $body');
-    }
-  }
-}
-
-extension StringHelpers on String {
-  String get tmdbPosterUrl =>
-      ApiService.buildImageUrl(this, size: ApiConstants.posterSizeMedium);
-  String get tmdbBackdropUrl =>
-      ApiService.buildImageUrl(this, size: ApiConstants.backdropSizeLarge);
-  String get tmdbProfileUrl =>
-      ApiService.buildImageUrl(this, size: ApiConstants.profileSizeSmall);
-  String get tmdbStillUrl =>
-      ApiService.buildImageUrl(this, size: ApiConstants.stillSizeMedium);
-}
-
-extension DateTimeHelpers on DateTime {
-  String get formattedDate => ApiService.formatDate(toIso8601String());
-
-  String get timeAgo {
-    final now = DateTime.now();
-    final difference = now.difference(this);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} jour${difference.inDays > 1 ? 's' : ''} ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} heure${difference.inHours > 1 ? 's' : ''} ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''} ago';
-    } else {
-      return 'À l\'instant';
-    }
-  }
-}
-
-extension DurationHelpers on int {
-  String get formattedDuration => ApiService.formatDuration(this);
-
-  String get formattedTime {
-    final hours = this ~/ 3600;
-    final minutes = (this % 3600) ~/ 60;
-    final seconds = this % 60;
-
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    } else {
-      return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    }
-  }
-}
-
-extension RatingHelpers on double {
-  String get formattedRating => ApiService.formatRating(this);
-
-  int get ratingStars => (this / 2).round().clamp(0, 5);
-
-  String get ratingPercentage => '${(this * 10).round()}%';
 }

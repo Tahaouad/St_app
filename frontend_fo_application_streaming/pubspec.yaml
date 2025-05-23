@@ -19,15 +19,15 @@ dependencies:
   shimmer: ^3.0.0
   cached_network_image: ^3.3.1
   
-  # Video player
-  webview_flutter: ^4.4.2
+  # Video player - remplacé webview par youtube_player
+  youtube_player_flutter: ^9.0.1
   
-  # Navigation
-  go_router: ^14.0.0
+  # Navigation - simplifié
+  # go_router: ^14.0.0  # Commenté car vous n'utilisez pas go_router dans vos fichiers
   
-  # State management
-  riverpod: ^2.4.0
-  flutter_riverpod: ^2.4.0
+  # State management - gardé provider seulement
+  # riverpod: ^2.4.0  # Commenté car vous utilisez provider
+  # flutter_riverpod: ^2.4.0  # Commenté car vous utilisez provider
   
   # JSON serialization
   json_serializable: ^6.7.1
@@ -35,7 +35,6 @@ dependencies:
   
   # Utils
   intl: ^0.19.0
-  uuid: ^4.2.1
   
   # Icons
   cupertino_icons: ^1.0.5
@@ -45,10 +44,12 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.1
   build_runner: ^2.4.7
-  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
   
   assets:
     - assets/images/
+
+# Pour générer les modèles JSON automatiquement :
+# flutter packages pub run build_runner build

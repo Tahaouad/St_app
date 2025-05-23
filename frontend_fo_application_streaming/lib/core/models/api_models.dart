@@ -1,11 +1,12 @@
 import 'package:json_annotation/json_annotation.dart';
 
-part 'api_models.g.dart';
+part '../../models/api_models.g.dart';
 
 // ==========================================
 // USER MODELS
 // ==========================================
 
+@JsonSerializable()
 class User {
   final int id;
   final String name;

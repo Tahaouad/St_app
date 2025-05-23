@@ -1,74 +1,77 @@
-// lib/providers/auth_provider.dart
+// lib/data/providers/auth_provider.dart
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/api_models.dart';
-import '../services/api_service.dart';
+import '../core/models/api_models.dart';
+import '../../services/api_service.dart';
 
-// État d'authentification
-enum AuthState {
-  initial,
-  loading,
-  authenticated,
-  unauthenticated,
-  error,
-}
+class AuthProvider extends ChangeNotifier {
+  final ApiService _apiService = ApiService();
+  
+  User? _user;
+  bool _isLoading = false;
+  String? _error;
 
-// Classe pour gérer l'état d'auth
-class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
-  final ApiService _apiService;
-  User? _currentUser;
+  User? get user => _user;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isAuthenticated => _user != null;
 
-  AuthNotifier(this._apiService) : super(const AsyncValue.loading()) {
+  AuthProvider() {
     _checkAuthStatus();
   }
-
-  User? get currentUser => _currentUser;
 
   // Vérifier le statut d'authentification au démarrage
   Future<void> _checkAuthStatus() async {
     try {
+      _setLoading(true);
       final isLoggedIn = await _apiService.isLoggedIn();
       if (isLoggedIn) {
         final user = await _apiService.getCurrentUser();
         if (user != null) {
-          _currentUser = user;
-          state = AsyncValue.data(user);
+          _user = user;
         } else {
           // Token invalide, déconnecter
           await logout();
         }
-      } else {
-        state = const AsyncValue.data(null);
       }
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
+      _setError('Erreur lors de la vérification de l\'authentification');
+    } finally {
+      _setLoading(false);
     }
   }
 
   // Connexion
   Future<bool> login(String email, String password) async {
     try {
-      state = const AsyncValue.loading();
+      _setLoading(true);
+      _clearError();
 
       final loginRequest = LoginRequest(email: email, password: password);
       final authResponse = await _apiService.login(loginRequest);
 
-      _currentUser = authResponse.user;
-      state = AsyncValue.data(authResponse.user);
-
+      _user = authResponse.user;
+      notifyListeners();
       return true;
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
+      if (error is ApiException) {
+        _setError(error.message);
+      } else if (error is NetworkException) {
+        _setError(error.message);
+      } else {
+        _setError('Erreur de connexion: ${error.toString()}');
+      }
       return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
   // Inscription
-  Future<bool> register(String name, String email, String password,
-      {String? avatar}) async {
+  Future<bool> register(String name, String email, String password, String? avatar) async {
     try {
-      state = const AsyncValue.loading();
+      _setLoading(true);
+      _clearError();
 
       final registerRequest = RegisterRequest(
         name: name,
@@ -76,15 +79,22 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         password: password,
         avatar: avatar,
       );
+      
       final authResponse = await _apiService.register(registerRequest);
-
-      _currentUser = authResponse.user;
-      state = AsyncValue.data(authResponse.user);
-
+      _user = authResponse.user;
+      notifyListeners();
       return true;
     } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
+      if (error is ApiException) {
+        _setError(error.message);
+      } else if (error is NetworkException) {
+        _setError(error.message);
+      } else {
+        _setError('Erreur d\'inscription: ${error.toString()}');
+      }
       return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
@@ -92,49 +102,56 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   Future<void> logout() async {
     try {
       await _apiService.logout();
-      _currentUser = null;
-      state = const AsyncValue.data(null);
     } catch (error) {
       // Même en cas d'erreur, on déconnecte localement
-      _currentUser = null;
-      state = const AsyncValue.data(null);
+      print('Erreur lors de la déconnexion: $error');
+    } finally {
+      _user = null;
+      _clearError();
+      notifyListeners();
+    }
+  }
+
+  // Charger le profil utilisateur
+  Future<void> loadUserProfile() async {
+    if (!isAuthenticated) return;
+
+    try {
+      _setLoading(true);
+      final user = await _apiService.getProfile();
+      _user = user;
+      notifyListeners();
+    } catch (error) {
+      if (error is ApiException && error.isAuthError) {
+        // Token expiré, déconnecter
+        await logout();
+      } else {
+        _setError('Erreur lors du chargement du profil');
+      }
+    } finally {
+      _setLoading(false);
     }
   }
 
   // Rafraîchir le profil
   Future<void> refreshProfile() async {
-    try {
-      if (_currentUser != null) {
-        final user = await _apiService.getProfile();
-        _currentUser = user;
-        state = AsyncValue.data(user);
-      }
-    } catch (error) {
-      state = AsyncValue.error(error, StackTrace.current);
-    }
+    if (!isAuthenticated) return;
+    await loadUserProfile();
   }
 
-  // Vérifier si l'utilisateur est connecté
-  bool get isAuthenticated => _currentUser != null;
+  // Méthodes utilitaires privées
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _error = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _error = null;
+    notifyListeners();
+  }
 }
-
-// Providers
-final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
-
-final authProvider =
-    StateNotifierProvider<AuthNotifier, AsyncValue<User?>>((ref) {
-  final apiService = ref.watch(apiServiceProvider);
-  return AuthNotifier(apiService);
-});
-
-// Provider pour obtenir l'utilisateur actuel
-final currentUserProvider = Provider<User?>((ref) {
-  final authState = ref.watch(authProvider);
-  return authState.asData?.value;
-});
-
-// Provider pour vérifier si l'utilisateur est connecté
-final isAuthenticatedProvider = Provider<bool>((ref) {
-  final user = ref.watch(currentUserProvider);
-  return user != null;
-});
