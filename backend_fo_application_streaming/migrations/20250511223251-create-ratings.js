@@ -1,6 +1,10 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Supprimer l'ancienne table Ratings
+    await queryInterface.dropTable('Ratings');
+    
+    // Créer la nouvelle table Ratings
     await queryInterface.createTable('Ratings', {
       id: {
         allowNull: false,
@@ -18,41 +22,19 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      movieId: {
+      tmdbId: {
         type: Sequelize.INTEGER,
-        references: {
-          model: 'Movies',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        allowNull: false
       },
-      seriesId: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'Series',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+      mediaType: {
+        type: Sequelize.ENUM('movie', 'tv', 'episode'),
+        allowNull: false
       },
-      seasonId: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'Seasons',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+      seasonNumber: {
+        type: Sequelize.INTEGER
       },
-      episodeId: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'Episodes',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+      episodeNumber: {
+        type: Sequelize.INTEGER
       },
       rating: {
         type: Sequelize.INTEGER,
@@ -65,9 +47,8 @@ module.exports = {
       comment: {
         type: Sequelize.TEXT
       },
-      isRecommended: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: true
+      title: {
+        type: Sequelize.STRING
       },
       createdAt: {
         allowNull: false,
@@ -79,48 +60,10 @@ module.exports = {
       }
     });
     
-    // Ajouter des index uniques pour éviter les doublons par utilisateur et contenu
-    await queryInterface.addIndex('Ratings', ['userId', 'movieId'], {
+    // Index pour éviter les doublons de notes
+    await queryInterface.addIndex('Ratings', ['userId', 'tmdbId', 'mediaType', 'seasonNumber', 'episodeNumber'], {
       unique: true,
-      name: 'user_movie_rating_unique',
-      where: {
-        movieId: {
-          [Sequelize.Op.ne]: null
-        }
-      }
-    });
-    
-    await queryInterface.addIndex('Ratings', ['userId', 'seriesId'], {
-      unique: true,
-      name: 'user_series_rating_unique',
-      where: {
-        seriesId: {
-          [Sequelize.Op.ne]: null
-        },
-        seasonId: null,
-        episodeId: null
-      }
-    });
-    
-    await queryInterface.addIndex('Ratings', ['userId', 'seasonId'], {
-      unique: true,
-      name: 'user_season_rating_unique',
-      where: {
-        seasonId: {
-          [Sequelize.Op.ne]: null
-        },
-        episodeId: null
-      }
-    });
-    
-    await queryInterface.addIndex('Ratings', ['userId', 'episodeId'], {
-      unique: true,
-      name: 'user_episode_rating_unique',
-      where: {
-        episodeId: {
-          [Sequelize.Op.ne]: null
-        }
-      }
+      name: 'user_rating_unique'
     });
   },
   down: async (queryInterface, Sequelize) => {

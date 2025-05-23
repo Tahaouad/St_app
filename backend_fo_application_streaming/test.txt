@@ -1,0 +1,430 @@
+// ==========================================
+// TESTS API BACKEND - STREAMING APP
+// ==========================================
+
+// Base URL
+const BASE_URL = 'http://localhost:5000/api';
+
+// ==========================================
+// 1. AUTHENTIFICATION
+// ==========================================
+
+// Inscription
+POST ${BASE_URL}/auth/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123",
+  "avatar": "https://api.dicebear.com/9.x/adventurer/svg?seed=John"
+}
+
+// Connexion
+POST ${BASE_URL}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+// Profil utilisateur (nécessite token)
+GET ${BASE_URL}/auth/me
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// ==========================================
+// 2. CONTENU (TMDB API)
+// ==========================================
+
+// Recherche multi (films et séries)
+GET ${BASE_URL}/content/search?query=avengers&page=1
+
+// Films populaires
+GET ${BASE_URL}/content/popular?type=movie&page=1
+
+// Séries populaires  
+GET ${BASE_URL}/content/popular?type=tv&page=1
+
+// Contenu trending
+GET ${BASE_URL}/content/trending?type=all&time=day&page=1
+
+// Top rated movies
+GET ${BASE_URL}/content/top-rated?type=movie&page=1
+
+// Films à venir
+GET ${BASE_URL}/content/upcoming?page=1
+
+// Genres films
+GET ${BASE_URL}/content/genres?type=movie
+
+// Genres séries
+GET ${BASE_URL}/content/genres?type=tv
+
+// Découverte par genre (Action = 28)
+GET ${BASE_URL}/content/genres/28/discover?type=movie&page=1
+
+// Détails d'un film (exemple: Avengers Endgame = 299534)
+GET ${BASE_URL}/content/movie/299534
+
+// Détails d'une série (exemple: Game of Thrones = 1399)
+GET ${BASE_URL}/content/tv/1399
+
+// Détails d'une saison
+GET ${BASE_URL}/content/tv/1399/season/1
+
+// Détails d'un épisode
+GET ${BASE_URL}/content/tv/1399/season/1/episode/1
+
+// URL de streaming pour un film
+GET ${BASE_URL}/content/stream/movie/299534?subtitle_lang=fr
+
+// URL de streaming pour un épisode
+GET ${BASE_URL}/content/stream/tv/1399?season=1&episode=1&subtitle_lang=fr
+
+// ==========================================
+// 3. WATCHLIST (nécessite authentification)
+// ==========================================
+
+// Ajouter à la watchlist
+POST ${BASE_URL}/user/watchlist
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "tmdbId": 299534,
+  "mediaType": "movie",
+  "title": "Avengers: Endgame",
+  "posterPath": "/or06FN3Dka5tukK1e9sl16pB3iy.jpg"
+}
+
+// Ajouter une série à la watchlist
+POST ${BASE_URL}/user/watchlist
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "tmdbId": 1399,
+  "mediaType": "tv", 
+  "title": "Game of Thrones",
+  "posterPath": "/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg"
+}
+
+// Récupérer la watchlist
+GET ${BASE_URL}/user/watchlist
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Récupérer la watchlist avec filtres
+GET ${BASE_URL}/user/watchlist?mediaType=movie&page=1&limit=10&sortBy=addedAt&order=DESC
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Vérifier si un élément est dans la watchlist
+GET ${BASE_URL}/user/watchlist/check?tmdbId=299534&mediaType=movie
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Retirer de la watchlist (remplacer {id} par l'ID réel)
+DELETE ${BASE_URL}/user/watchlist/1
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// ==========================================
+// 4. RATINGS (nécessite authentification)
+// ==========================================
+
+// Noter un film
+POST ${BASE_URL}/user/ratings
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "tmdbId": 299534,
+  "mediaType": "movie",
+  "rating": 9,
+  "comment": "Film incroyable ! Les effets spéciaux sont époustouflants.",
+  "title": "Avengers: Endgame"
+}
+
+// Noter une série
+POST ${BASE_URL}/user/ratings
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "tmdbId": 1399,
+  "mediaType": "tv",
+  "rating": 8,
+  "comment": "Excellente série, même si la fin était décevante.",
+  "title": "Game of Thrones"
+}
+
+// Noter un épisode spécifique
+POST ${BASE_URL}/user/ratings
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "tmdbId": 1399,
+  "mediaType": "episode",
+  "seasonNumber": 1,
+  "episodeNumber": 1,
+  "rating": 10,
+  "comment": "Pilot épisode parfait !",
+  "title": "Game of Thrones - S01E01"
+}
+
+// Récupérer toutes les notes de l'utilisateur
+GET ${BASE_URL}/user/ratings
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Récupérer les notes avec filtres
+GET ${BASE_URL}/user/ratings?mediaType=movie&minRating=8&page=1&limit=10
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Récupérer la note d'un contenu spécifique
+GET ${BASE_URL}/user/rating?tmdbId=299534&mediaType=movie
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Supprimer une note (remplacer {id} par l'ID réel)
+DELETE ${BASE_URL}/user/ratings/1
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// ==========================================
+// 5. HISTORIQUE DE VISIONNAGE (nécessite authentification)
+// ==========================================
+
+// Mettre à jour l'historique (film)
+POST ${BASE_URL}/user/history
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "tmdbId": 299534,
+  "mediaType": "movie",
+  "title": "Avengers: Endgame",
+  "posterPath": "/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
+  "progress": 3600,
+  "duration": 10800,
+  "completed": false
+}
+
+// Mettre à jour l'historique (épisode)
+POST ${BASE_URL}/user/history
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "tmdbId": 1399,
+  "mediaType": "episode",
+  "seasonNumber": 1,
+  "episodeNumber": 1,
+  "title": "Game of Thrones - S01E01",
+  "posterPath": "/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg",
+  "progress": 3000,
+  "duration": 3600,
+  "completed": true
+}
+
+// Récupérer l'historique complet
+GET ${BASE_URL}/user/history
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Récupérer l'historique avec filtres
+GET ${BASE_URL}/user/history?mediaType=movie&completed=false&page=1&limit=10
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Récupérer le progrès d'un contenu spécifique
+GET ${BASE_URL}/user/progress?tmdbId=299534&mediaType=movie
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Récupérer le progrès d'un épisode
+GET ${BASE_URL}/user/progress?tmdbId=1399&mediaType=episode&seasonNumber=1&episodeNumber=1
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Contenu à continuer de regarder
+GET ${BASE_URL}/user/continue-watching?limit=5
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// Nettoyer l'historique
+POST ${BASE_URL}/user/history/clear
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "mediaType": "movie",
+  "beforeDate": "2024-01-01T00:00:00Z"
+}
+
+// ==========================================
+// 6. STATISTIQUES UTILISATEUR (nécessite authentification)
+// ==========================================
+
+// Statistiques complètes de l'utilisateur
+GET ${BASE_URL}/user/stats
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+// ==========================================
+// 7. SANTÉ DE L'API
+// ==========================================
+
+// Vérifier que l'API fonctionne
+GET ${BASE_URL}/health
+
+// ==========================================
+// EXEMPLES AVEC CURL
+// ==========================================
+
+// Inscription avec cURL
+curl -X POST ${BASE_URL}/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test User",
+    "email": "test@example.com", 
+    "password": "password123"
+  }'
+
+// Connexion avec cURL
+curl -X POST ${BASE_URL}/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+
+// Recherche avec cURL
+curl -X GET "${BASE_URL}/content/search?query=batman&page=1"
+
+// Ajouter à la watchlist avec cURL (remplacer TOKEN par le vrai token)
+curl -X POST ${BASE_URL}/user/watchlist \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer TOKEN" \
+  -d '{
+    "tmdbId": 155,
+    "mediaType": "movie",
+    "title": "The Dark Knight",
+    "posterPath": "/qJ2tW6WMUDux911r6m7haRef0WH.jpg"
+  }'
+
+// ==========================================
+// EXEMPLES AVEC POSTMAN/THUNDER CLIENT
+// ==========================================
+
+// Collection Postman/Thunder Client:
+
+### Variables d'environnement ###
+// baseUrl: http://localhost:5000/api
+// token: (sera rempli après login)
+
+### 1. Register
+POST {{baseUrl}}/auth/register
+{
+  "name": "Test User",
+  "email": "test@test.com",
+  "password": "123456"
+}
+
+### 2. Login  
+POST {{baseUrl}}/auth/login
+{
+  "email": "test@test.com", 
+  "password": "123456"
+}
+// Sauvegarder le token retourné dans la variable {{token}}
+
+### 3. Search
+GET {{baseUrl}}/content/search?query=marvel
+
+### 4. Add to Watchlist
+POST {{baseUrl}}/user/watchlist
+Authorization: Bearer {{token}}
+{
+  "tmdbId": 299534,
+  "mediaType": "movie",
+  "title": "Avengers: Endgame",
+  "posterPath": "/or06FN3Dka5tukK1e9sl16pB3iy.jpg"
+}
+
+### 5. Get Watchlist
+GET {{baseUrl}}/user/watchlist
+Authorization: Bearer {{token}}
+
+### 6. Rate Content
+POST {{baseUrl}}/user/ratings
+Authorization: Bearer {{token}}
+{
+  "tmdbId": 299534,
+  "mediaType": "movie", 
+  "rating": 9,
+  "title": "Avengers: Endgame",
+  "comment": "Amazing movie!"
+}
+
+### 7. Update Watch History
+POST {{baseUrl}}/user/history
+Authorization: Bearer {{token}}
+{
+  "tmdbId": 299534,
+  "mediaType": "movie",
+  "title": "Avengers: Endgame",
+  "progress": 1800,
+  "duration": 10800
+}
+
+### 8. Get Stream URL
+GET {{baseUrl}}/content/stream/movie/299534
+
+### 9. User Stats
+GET {{baseUrl}}/user/stats
+Authorization: Bearer {{token}}
+
+// ==========================================
+// DONNÉES DE TEST UTILES
+// ==========================================
+
+// IDs TMDB populaires pour les tests:
+// Films:
+// - Avengers Endgame: 299534
+// - The Dark Knight: 155  
+// - Inception: 27205
+// - Interstellar: 157336
+// - Spider-Man: 557
+
+// Séries:
+// - Game of Thrones: 1399
+// - Breaking Bad: 1396
+// - Stranger Things: 66732
+// - The Office: 2316
+// - Friends: 1668
+
+// Genres populaires:
+// - Action: 28
+// - Comedy: 35  
+// - Drama: 18
+// - Horror: 27
+// - Sci-Fi: 878
+
+// ==========================================
+// CODES DE RÉPONSE ATTENDUS
+// ==========================================
+
+// 200: Succès (GET)
+// 201: Créé avec succès (POST)
+// 400: Données invalides
+// 401: Non authentifié
+// 403: Token invalide
+// 404: Ressource non trouvée
+// 409: Conflit (déjà existe)
+// 500: Erreur serveur
+
+// ==========================================
+// TESTS DE VALIDATION
+// ==========================================
+
+// Test 1: Créer un compte
+// Test 2: Se connecter et récupérer le token
+// Test 3: Rechercher du contenu
+// Test 4: Ajouter plusieurs éléments à la watchlist
+// Test 5: Noter du contenu
+// Test 6: Mettre à jour l'historique de visionnage
+// Test 7: Récupérer les statistiques
+// Test 8: Générer des URLs de streaming
+// Test 9: Tester les filtres et pagination
+// Test 10: Tester la suppression d'éléments

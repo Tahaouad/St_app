@@ -5,10 +5,6 @@ module.exports = (sequelize, DataTypes) => {
   class WatchHistory extends Model {
     static associate(models) {
       WatchHistory.belongsTo(models.User, { foreignKey: 'userId' });
-      WatchHistory.belongsTo(models.Movie, { foreignKey: 'movieId' });
-      WatchHistory.belongsTo(models.Series, { foreignKey: 'seriesId' });
-      WatchHistory.belongsTo(models.Season, { foreignKey: 'seasonId' });
-      WatchHistory.belongsTo(models.Episode, { foreignKey: 'episodeId' });
     }
   }
   
@@ -17,25 +13,33 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false
     },
-    movieId: DataTypes.INTEGER,
-    seriesId: DataTypes.INTEGER,
-    seasonId: DataTypes.INTEGER,
-    episodeId: DataTypes.INTEGER,
+    tmdbId: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    mediaType: {
+      type: DataTypes.ENUM('movie', 'tv', 'episode'),
+      allowNull: false
+    },
+    // Pour les épisodes/séries
+    seasonNumber: DataTypes.INTEGER,
+    episodeNumber: DataTypes.INTEGER,
+    
+    title: DataTypes.STRING,
+    posterPath: DataTypes.STRING,
+    
     watchedAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW
     },
     progress: {
-      type: DataTypes.INTEGER, // in seconds
+      type: DataTypes.INTEGER, // en secondes
       defaultValue: 0
     },
+    duration: DataTypes.INTEGER, // durée totale en secondes
     completed: {
       type: DataTypes.BOOLEAN,
       defaultValue: false
-    },
-    watchDuration: {
-      type: DataTypes.INTEGER, // in seconds
-      defaultValue: 0
     }
   }, {
     sequelize,

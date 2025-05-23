@@ -4,7 +4,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
-      User.hasMany(models.Favorite, { foreignKey: 'userId' });
+      User.hasMany(models.Watchlist, { foreignKey: 'userId' });
       User.hasMany(models.Rating, { foreignKey: 'userId' });
       User.hasMany(models.WatchHistory, { foreignKey: 'userId' });
     }
@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     role: {
-      type: DataTypes.ENUM('user', 'admin', 'moderator'),
+      type: DataTypes.ENUM('user', 'admin'),
       defaultValue: 'user'
     },
     avatar: {

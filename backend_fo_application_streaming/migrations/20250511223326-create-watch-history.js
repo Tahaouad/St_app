@@ -1,6 +1,10 @@
 'use strict';
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Supprimer l'ancienne table WatchHistories
+    await queryInterface.dropTable('WatchHistories');
+    
+    // Créer la nouvelle table WatchHistories
     await queryInterface.createTable('WatchHistories', {
       id: {
         allowNull: false,
@@ -18,57 +22,40 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      movieId: {
+      tmdbId: {
         type: Sequelize.INTEGER,
-        references: {
-          model: 'Movies',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        allowNull: false
       },
-      seriesId: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'Series',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+      mediaType: {
+        type: Sequelize.ENUM('movie', 'tv', 'episode'),
+        allowNull: false
       },
-      seasonId: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'Seasons',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+      seasonNumber: {
+        type: Sequelize.INTEGER
       },
-      episodeId: {
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'Episodes',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+      episodeNumber: {
+        type: Sequelize.INTEGER
+      },
+      title: {
+        type: Sequelize.STRING
+      },
+      posterPath: {
+        type: Sequelize.STRING
       },
       watchedAt: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.NOW
       },
       progress: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.INTEGER, // en secondes
         defaultValue: 0
+      },
+      duration: {
+        type: Sequelize.INTEGER // durée totale en secondes
       },
       completed: {
         type: Sequelize.BOOLEAN,
         defaultValue: false
-      },
-      watchDuration: {
-        type: Sequelize.INTEGER,
-        defaultValue: 0
       },
       createdAt: {
         allowNull: false,
@@ -79,6 +66,10 @@ module.exports = {
         type: Sequelize.DATE
       }
     });
+    
+    // Index pour les requêtes fréquentes
+    await queryInterface.addIndex('WatchHistories', ['userId', 'watchedAt']);
+    await queryInterface.addIndex('WatchHistories', ['userId', 'completed']);
   },
   down: async (queryInterface, Sequelize) => {
     await queryInterface.dropTable('WatchHistories');
