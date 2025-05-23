@@ -68,10 +68,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         children: [
           // Background image with dynamic gradient
           Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
+            decoration: BoxDecoration(
+              color: AppColors.background, // Couleur de fallback
+              image: const DecorationImage(
                 image: AssetImage('assets/images/welcome.jpg'),
                 fit: BoxFit.cover,
+                onError: null, // Ignore l'erreur si l'image n'existe pas
               ),
             ),
           ),

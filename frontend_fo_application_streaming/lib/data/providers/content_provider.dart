@@ -23,14 +23,13 @@ class ContentProvider extends ChangeNotifier {
   List<ContentItem> get movies => _movies;
   List<ContentItem> get series => _series;
 
-  // Pour les catégories simulées (à remplacer par des vraies données plus tard)
+  // Pour les catégories simulées
   List<ContentItem> get trendingContent => _popularContent.take(10).toList();
   List<ContentItem> get newReleases =>
       [..._movies, ..._series].take(10).toList();
   List<ContentItem> get recommendedContent =>
       _featuredContent.take(10).toList();
 
-  // Méthode pour charger tout le contenu
   Future<void> loadAllContent() async {
     _isLoading = true;
     _error = null;
@@ -40,8 +39,8 @@ class ContentProvider extends ChangeNotifier {
       await Future.wait([
         _loadFeaturedContent(),
         _loadPopularContent(),
-        loadMovies(), // Utiliser loadMovies() sans underscore
-        loadSeries(), // Utiliser loadSeries() sans underscore
+        loadMovies(),
+        loadSeries(),
       ]);
     } catch (e) {
       _error = 'Erreur lors du chargement du contenu: ${e.toString()}';
@@ -51,7 +50,6 @@ class ContentProvider extends ChangeNotifier {
     }
   }
 
-  // Méthode pour charger les films avec filtres
   Future<void> loadMovies({
     int? categoryId,
     int? genreId,
@@ -88,7 +86,6 @@ class ContentProvider extends ChangeNotifier {
     }
   }
 
-  // Méthode pour charger les séries avec filtres
   Future<void> loadSeries({
     int? categoryId,
     int? genreId,
@@ -125,7 +122,6 @@ class ContentProvider extends ChangeNotifier {
     }
   }
 
-  // Méthodes privées pour charger différents types de contenu
   Future<void> _loadFeaturedContent() async {
     try {
       final movieResult = await _movieService.getFeaturedMovies();
@@ -149,15 +145,13 @@ class ContentProvider extends ChangeNotifier {
         );
       }
 
-      // Mélanger et limiter à 5 éléments
       _featuredContent.shuffle();
       if (_featuredContent.length > 5) {
         _featuredContent = _featuredContent.sublist(0, 5);
       }
     } catch (e) {
       print(
-        'Erreur lors du chargement des contenus en vedette: ${e.toString()}',
-      );
+          'Erreur lors du chargement des contenus en vedette: ${e.toString()}');
     }
   }
 
@@ -184,12 +178,10 @@ class ContentProvider extends ChangeNotifier {
         );
       }
 
-      // Mélanger les contenus populaires
       _popularContent.shuffle();
     } catch (e) {
       print(
-        'Erreur lors du chargement des contenus populaires: ${e.toString()}',
-      );
+          'Erreur lors du chargement des contenus populaires: ${e.toString()}');
     }
   }
 }

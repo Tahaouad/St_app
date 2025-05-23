@@ -1,5 +1,4 @@
 // lib/core/models/content_item.dart
-
 import 'content_enums.dart';
 
 class ContentItem {
@@ -39,7 +38,7 @@ class ContentItem {
   factory ContentItem.fromJson(Map<String, dynamic> json) {
     final mediaType = json['media_type'] ?? json['mediaType'];
     ContentType type;
-    
+
     if (mediaType == 'movie') {
       type = ContentType.movie;
     } else if (mediaType == 'tv') {
@@ -90,7 +89,7 @@ class ContentItem {
 
   static List<String> _extractGenresFromJson(dynamic genres) {
     if (genres == null) return [];
-    
+
     if (genres is List) {
       return genres.map((g) {
         if (g is Map<String, dynamic> && g['name'] != null) {
@@ -99,7 +98,7 @@ class ContentItem {
         return g.toString();
       }).toList();
     }
-    
+
     return [];
   }
 
@@ -160,8 +159,6 @@ extension ContentTypeExtension on ContentType {
 
 // lib/core/models/content_details.dart
 
-import 'content_enums.dart';
-
 class ContentDetails {
   final int id;
   final String title;
@@ -217,7 +214,8 @@ class ContentDetails {
       creator: _extractCreator(json['created_by']),
       cast: _extractCast(json['credits']),
       trailerUrl: _extractTrailerUrl(json['videos']),
-      seasons: type == ContentType.series ? _extractSeasons(json['seasons']) : null,
+      seasons:
+          type == ContentType.series ? _extractSeasons(json['seasons']) : null,
       recommendations: _extractRecommendations(json['recommendations']),
       similar: _extractSimilar(json['similar']),
     );
@@ -245,13 +243,13 @@ class ContentDetails {
   static List<Genre>? _extractGenres(dynamic genres) {
     if (genres == null) return null;
     if (genres is! List) return null;
-    
+
     return genres.map((g) => Genre.fromJson(g)).toList();
   }
 
   static String? _extractDirector(dynamic credits) {
     if (credits == null || credits['crew'] == null) return null;
-    
+
     for (var crew in credits['crew']) {
       if (crew['job'] == 'Director') {
         return crew['name'];
@@ -261,13 +259,14 @@ class ContentDetails {
   }
 
   static String? _extractCreator(dynamic createdBy) {
-    if (createdBy == null || createdBy is! List || createdBy.isEmpty) return null;
+    if (createdBy == null || createdBy is! List || createdBy.isEmpty)
+      return null;
     return createdBy[0]['name'];
   }
 
   static String? _extractCast(dynamic credits) {
     if (credits == null || credits['cast'] == null) return null;
-    
+
     final List<String> castNames = [];
     for (var i = 0; i < credits['cast'].length && i < 5; i++) {
       castNames.add(credits['cast'][i]['name']);
@@ -277,7 +276,7 @@ class ContentDetails {
 
   static String? _extractTrailerUrl(dynamic videos) {
     if (videos == null || videos['results'] == null) return null;
-    
+
     for (var video in videos['results']) {
       if (video['type'] == 'Trailer' && video['site'] == 'YouTube') {
         return 'https://www.youtube.com/watch?v=${video['key']}';
@@ -288,13 +287,14 @@ class ContentDetails {
 
   static List<Season>? _extractSeasons(dynamic seasons) {
     if (seasons == null || seasons is! List) return null;
-    
+
     return seasons.map((s) => Season.fromJson(s)).toList();
   }
 
   static List<ContentItem>? _extractRecommendations(dynamic recommendations) {
-    if (recommendations == null || recommendations['results'] == null) return null;
-    
+    if (recommendations == null || recommendations['results'] == null)
+      return null;
+
     return (recommendations['results'] as List)
         .take(10)
         .map((item) => ContentItem.fromJson(item))
@@ -303,7 +303,7 @@ class ContentDetails {
 
   static List<ContentItem>? _extractSimilar(dynamic similar) {
     if (similar == null || similar['results'] == null) return null;
-    
+
     return (similar['results'] as List)
         .take(10)
         .map((item) => ContentItem.fromJson(item))
