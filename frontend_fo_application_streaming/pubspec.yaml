@@ -1,55 +1,57 @@
+
 name: frontend_fo_application_streaming
-description: A streaming app with TMDB integration
+description: Application de streaming
+
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
 
 dependencies:
   flutter:
     sdk: flutter
   
-  # Core packages
-  http: ^1.2.0
-  flutter_secure_storage: ^9.0.0
-  provider: ^6.1.0
-  
-  # UI packages
-  flutter_svg: ^2.0.10
+  # UI et navigation
+  cupertino_icons: ^1.0.2
+  flutter_svg: ^2.0.7
+  cached_network_image: ^3.3.0
   shimmer: ^3.0.0
-  cached_network_image: ^3.3.1
   
-  # Video player - remplacé webview par youtube_player
-  youtube_player_flutter: ^9.0.1
+  # État et gestion des données
+  provider: ^6.1.1
   
-  # Navigation - simplifié
-  # go_router: ^14.0.0  # Commenté car vous n'utilisez pas go_router dans vos fichiers
+  # Réseau et API
+  http: ^1.1.0
   
-  # State management - gardé provider seulement
-  # riverpod: ^2.4.0  # Commenté car vous utilisez provider
-  # flutter_riverpod: ^2.4.0  # Commenté car vous utilisez provider
+  # Stockage sécurisé
+  flutter_secure_storage: ^9.0.0
   
-  # JSON serialization
-  json_serializable: ^6.7.1
+  # Sérialisation JSON
   json_annotation: ^4.8.1
   
-  # Utils
-  intl: ^0.19.0
+  # Internationalisation
+  intl: ^0.18.1
   
-  # Icons
-  cupertino_icons: ^1.0.5
+  # Lecteur vidéo - Solution alternative plus stable
+  video_player: ^2.8.1
+  webview_flutter: ^4.4.2
+  
+  # Pour les URLs YouTube (alternative à youtube_player_flutter)
+  url_launcher: ^6.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.1
+  flutter_lints: ^3.0.0
+  json_serializable: ^6.7.1
   build_runner: ^2.4.7
 
 flutter:
   uses-material-design: true
-  
   assets:
     - assets/images/
 
-# Pour générer les modèles JSON automatiquement :
-# flutter packages pub run build_runner build
+
+# Réinst

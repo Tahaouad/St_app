@@ -1,3 +1,4 @@
+// lib/presentation/screens/home/widgets/home_featured_section.dart
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_item.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_enums.dart';
@@ -27,19 +28,18 @@ class HomeFeaturedSection extends StatelessWidget {
             year: content.releaseYear.toString(),
             quality: '4K Ultra HD',
             type: content.type == ContentType.movie ? 'Film' : 'Série',
-            onPlayPressed: () {
-              // Navigation vers les détails du contenu
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ContentDetailsScreen(
-                    contentItem: content,
-                  ),
-                ),
-              );
-            },
+            contentId: content.id, // Passer l'ID du contenu
+            contentType: content.type, // Passer le type de contenu
             onAddToListPressed: () {
               // TODO: Ajouter aux favoris
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'Fonctionnalité "Ma liste" en cours de développement'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
             },
             onInfoPressed: () {
               // Navigation vers les détails
