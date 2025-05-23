@@ -3,6 +3,7 @@
 import 'package:flutter/foundation.dart';
 import '../../services/api_service.dart';
 import '../../core/models/content_item.dart';
+import '../../core/models/content_enums.dart';
 
 class ContentProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
