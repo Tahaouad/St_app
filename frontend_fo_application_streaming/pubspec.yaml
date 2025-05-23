@@ -1,5 +1,5 @@
 name: frontend_fo_application_streaming
-description: A new Flutter project.
+description: A streaming app with TMDB integration
 version: 1.0.0+1
 
 environment:
@@ -17,25 +17,35 @@ dependencies:
   # UI packages
   flutter_svg: ^2.0.10
   shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
   
-  # Video player (choisir l'un des trois)
-  webview_flutter: ^4.4.2        # Option 2: WebView pour iframe
-  flutter_inappwebview: ^6.0.0   # Option 3: WebView avancé
-  youtube_player_flutter: 9.1.1
-
+  # Video player
+  webview_flutter: ^4.4.2
   
-  # Optionnel - pour améliorer l'expérience
-  cached_network_image: ^3.3.1   # Pour cacher les images
-  url_launcher: ^6.2.4          # Pour ouvrir dans le navigateur
-
-
-  # Other
+  # Navigation
+  go_router: ^14.0.0
+  
+  # State management
+  riverpod: ^2.4.0
+  flutter_riverpod: ^2.4.0
+  
+  # JSON serialization
+  json_serializable: ^6.7.1
+  json_annotation: ^4.8.1
+  
+  # Utils
+  intl: ^0.19.0
+  uuid: ^4.2.1
+  
+  # Icons
   cupertino_icons: ^1.0.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
