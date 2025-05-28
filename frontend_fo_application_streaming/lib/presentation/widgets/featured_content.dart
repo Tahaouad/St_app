@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_enums.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/player/video_player_screen.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/player/simple_video_player.dart';
 import 'package:frontend_fo_application_streaming/domain/services/streaming_service.dart';
 
 class FeaturedContent extends StatefulWidget {
@@ -385,43 +386,55 @@ class _FeaturedContentState extends State<FeaturedContent> {
     });
 
     try {
-      final streamingService = StreamingService();
-      Map<String, dynamic> result;
+      // D'abord essayer d'obtenir l'URL depuis l'API
+      String? streamUrl;
 
       if (widget.contentType == ContentType.movie) {
-        result = await streamingService.getMovieStreamUrl(widget.contentId);
+        final result =
+            await StreamingService().getMovieStreamUrl(widget.contentId);
+        if (result['success']) {
+          streamUrl = result['data']['streamUrl'];
+        }
       } else {
-        result = await streamingService.getEpisodeStreamUrl(
+        final result = await StreamingService().getEpisodeStreamUrl(
           widget.contentId,
           1, // Première saison
           1, // Premier épisode
         );
+        if (result['success']) {
+          streamUrl = result['data']['streamUrl'];
+        }
       }
 
       if (mounted) {
-        if (result['success']) {
-          final streamData = result['data'];
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VideoPlayerScreen(
-                title: streamData['title'] ?? widget.title,
-                streamUrl: streamData['streamUrl'],
-                isEpisode: widget.contentType == ContentType.series,
-                season: streamData['season'],
-                episode: streamData['episode'],
-              ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SimpleVideoPlayer(
+              title: widget.title,
+              streamUrl:
+                  'https://vidsrc.xyz/embed/movie?tmdb=${widget.contentId}',
             ),
-          );
-        } else {
-          _showErrorSnackBar(result['message'] ?? 'Erreur lors de la lecture');
-        }
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar(
-            'Erreur de connexion: Vérifiez votre connexion internet');
+        // Même en cas d'erreur API, on peut toujours essayer avec les URLs alternatives
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoPlayerScreen(
+              title: widget.title,
+              tmdbId: widget.contentId,
+              mediaType:
+                  widget.contentType == ContentType.movie ? 'movie' : 'tv',
+              isEpisode: widget.contentType == ContentType.series,
+              season: widget.contentType == ContentType.series ? 1 : null,
+              episode: widget.contentType == ContentType.series ? 1 : null,
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -430,26 +443,5 @@ class _FeaturedContentState extends State<FeaturedContent> {
         });
       }
     }
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Réessayer',
-          textColor: Colors.white,
-          onPressed: _handlePlayPressed,
-        ),
-      ),
-    );
   }
 }

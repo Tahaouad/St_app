@@ -3,22 +3,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
+import 'package:frontend_fo_application_streaming/domain/services/streaming_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final String title;
-  final String streamUrl;
+  final String? streamUrl; // URL optionnelle
+  final int? tmdbId; // ID TMDB pour générer les URLs
+  final String? mediaType; // Type de média
   final bool isEpisode;
   final int? season;
   final int? episode;
+  final String? imdbId; // ID IMDB optionnel
 
   const VideoPlayerScreen({
     super.key,
     required this.title,
-    required this.streamUrl,
+    this.streamUrl,
+    this.tmdbId,
+    this.mediaType,
     this.isEpisode = false,
     this.season,
     this.episode,
+    this.imdbId,
   });
 
   @override
@@ -30,10 +37,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isLoading = true;
   String? _error;
   bool _showControls = true;
+  int _currentUrlIndex = 0;
+  List<String> _streamUrls = [];
 
   @override
   void initState() {
     super.initState();
+    _generateStreamUrls();
     _initializeWebView();
 
     // Configuration de l'écran
@@ -44,16 +54,70 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    // Masquer les contrôles après 3 secondes
+    // Masquer les contrôles après 5 secondes
     _hideControlsAfterDelay();
   }
 
+  void _generateStreamUrls() {
+    _streamUrls = [];
+
+    // Si une URL est fournie directement, l'utiliser en premier
+    if (widget.streamUrl != null && widget.streamUrl!.isNotEmpty) {
+      _streamUrls.add(widget.streamUrl!);
+    }
+
+    // Générer des URLs alternatives si on a les données nécessaires
+    if (widget.tmdbId != null && widget.mediaType != null) {
+      final alternativeUrls = StreamingService.getAlternativeStreamUrls(
+        tmdbId: widget.tmdbId!,
+        mediaType: widget.mediaType!,
+        imdbId: widget.imdbId,
+        season: widget.season,
+        episode: widget.episode,
+      );
+
+      // Ajouter les URLs qui ne sont pas déjà dans la liste
+      for (final url in alternativeUrls) {
+        if (!_streamUrls.contains(url)) {
+          _streamUrls.add(url);
+        }
+      }
+    }
+
+    // URL de fallback si aucune autre n'est disponible
+    if (_streamUrls.isEmpty &&
+        widget.tmdbId != null &&
+        widget.mediaType != null) {
+      try {
+        final fallbackUrl = StreamingService.buildStreamUrl(
+          tmdbId: widget.tmdbId!,
+          mediaType: widget.mediaType!,
+          imdbId: widget.imdbId,
+          season: widget.season,
+          episode: widget.episode,
+        );
+        _streamUrls.add(fallbackUrl);
+      } catch (e) {
+        print('Erreur génération URL fallback: $e');
+      }
+    }
+  }
+
   void _initializeWebView() {
+    if (_streamUrls.isEmpty) {
+      setState(() {
+        _error = 'Aucune URL de streaming disponible';
+        _isLoading = false;
+      });
+      return;
+    }
+
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.black)
       ..setUserAgent(
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
       ..setNavigationDelegate(
         NavigationDelegate(
           onProgress: (int progress) {
@@ -65,31 +129,66 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             if (mounted) {
               setState(() {
                 _isLoading = true;
-                _error = null;
               });
             }
           },
           onPageFinished: (String url) {
             if (mounted) {
-              setState(() => _isLoading = false);
+              setState(() {
+                _isLoading = false;
+                _error = null;
+              });
             }
           },
           onWebResourceError: (WebResourceError error) {
             if (mounted) {
-              setState(() {
-                _isLoading = false;
-                _error = 'Impossible de charger la vidéo';
-              });
+              print('Erreur WebView: ${error.description}');
+              _handleLoadError('Impossible de charger la vidéo');
+            }
+          },
+          onHttpError: (HttpResponseError error) {
+            if (mounted) {
+              print('Erreur HTTP: ${error.response?.statusCode}');
+              _handleLoadError('Erreur de connexion au serveur de streaming');
             }
           },
         ),
-      )
-      ..loadRequest(Uri.parse(widget.streamUrl));
+      );
+
+    _loadCurrentUrl();
+  }
+
+  void _handleLoadError(String errorMessage) {
+    if (_currentUrlIndex < _streamUrls.length - 1) {
+      // Essayer l'URL suivante
+      print(
+          'Tentative URL suivante: ${_currentUrlIndex + 1}/${_streamUrls.length}');
+      setState(() {
+        _currentUrlIndex++;
+        _isLoading = true;
+        _error = null;
+      });
+      _loadCurrentUrl();
+    } else {
+      // Plus d'URLs à essayer
+      setState(() {
+        _isLoading = false;
+        _error = errorMessage;
+      });
+    }
+  }
+
+  void _loadCurrentUrl() {
+    if (_currentUrlIndex < _streamUrls.length) {
+      final url = _streamUrls[_currentUrlIndex];
+      print('Chargement URL: $url');
+      _controller.loadRequest(Uri.parse(url));
+    }
   }
 
   void _hideControlsAfterDelay() {
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _showControls) {
         setState(() => _showControls = false);
       }
     });
@@ -130,7 +229,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         child: Stack(
           children: [
             // WebView Player
-            if (_error == null)
+            if (_error == null && _streamUrls.isNotEmpty)
               WebViewWidget(controller: _controller)
             else
               _buildErrorWidget(),
@@ -149,18 +248,30 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'Chargement...',
+                        'Chargement du lecteur...',
                         style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         _displayTitle,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 14),
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (_streamUrls.length > 1) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Source ${_currentUrlIndex + 1}/${_streamUrls.length}',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -214,6 +325,21 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (_streamUrls.length > 1)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        '${_currentUrlIndex + 1}/${_streamUrls.length}',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
                   IconButton(
                     onPressed: _showOptionsMenu,
                     icon: const Icon(Icons.more_vert, color: Colors.white),
@@ -228,20 +354,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   IconButton(
                     onPressed: () => _controller.reload(),
                     icon: const Icon(Icons.refresh,
                         color: Colors.white, size: 32),
                   ),
-                  const SizedBox(width: 24),
+                  if (_streamUrls.length > 1)
+                    IconButton(
+                      onPressed: _tryNextUrl,
+                      icon: const Icon(Icons.skip_next,
+                          color: Colors.white, size: 32),
+                    ),
                   IconButton(
                     onPressed: _openInBrowser,
                     icon: const Icon(Icons.open_in_browser,
                         color: Colors.white, size: 32),
                   ),
-                  const SizedBox(width: 24),
                   IconButton(
                     onPressed: _toggleFullscreen,
                     icon: const Icon(Icons.fullscreen,
@@ -283,17 +413,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                alignment: WrapAlignment.center,
                 children: [
+                  if (_streamUrls.length > 1 &&
+                      _currentUrlIndex < _streamUrls.length - 1)
+                    ElevatedButton.icon(
+                      onPressed: _tryNextUrl,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                      ),
+                      icon: const Icon(Icons.skip_next, color: Colors.white),
+                      label: const Text('Source suivante',
+                          style: TextStyle(color: Colors.white)),
+                    ),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _error = null;
-                        _isLoading = true;
-                      });
-                      _initializeWebView();
-                    },
+                    onPressed: _retryCurrentUrl,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(
@@ -303,7 +442,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     label: const Text('Réessayer',
                         style: TextStyle(color: Colors.white)),
                   ),
-                  const SizedBox(width: 16),
                   ElevatedButton.icon(
                     onPressed: _openInBrowser,
                     style: ElevatedButton.styleFrom(
@@ -313,7 +451,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                     ),
                     icon:
                         const Icon(Icons.open_in_browser, color: Colors.white),
-                    label: const Text('Ouvrir dans le navigateur',
+                    label: const Text('Navigateur',
                         style: TextStyle(color: Colors.white)),
                   ),
                 ],
@@ -336,29 +474,51 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     );
   }
 
+  void _tryNextUrl() {
+    if (_currentUrlIndex < _streamUrls.length - 1) {
+      setState(() {
+        _currentUrlIndex++;
+        _error = null;
+        _isLoading = true;
+      });
+      _loadCurrentUrl();
+    }
+  }
+
+  void _retryCurrentUrl() {
+    setState(() {
+      _error = null;
+      _isLoading = true;
+    });
+    _loadCurrentUrl();
+  }
+
   void _openInBrowser() async {
-    try {
-      final uri = Uri.parse(widget.streamUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
+    if (_streamUrls.isNotEmpty) {
+      final url = _streamUrls[_currentUrlIndex];
+      try {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Impossible d\'ouvrir le lien'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Impossible d\'ouvrir le lien'),
+            SnackBar(
+              content: Text('Erreur: ${e.toString()}'),
               backgroundColor: Colors.red,
             ),
           );
         }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     }
   }
@@ -396,9 +556,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             const Text(
               'Options de lecture',
               style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 20),
             ListTile(
@@ -410,6 +571,17 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                 _controller.reload();
               },
             ),
+            if (_streamUrls.length > 1 &&
+                _currentUrlIndex < _streamUrls.length - 1)
+              ListTile(
+                leading: const Icon(Icons.skip_next, color: Colors.white),
+                title: const Text('Source suivante',
+                    style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _tryNextUrl();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.open_in_browser, color: Colors.white),
               title: const Text('Ouvrir dans le navigateur',

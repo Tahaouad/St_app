@@ -1,57 +1,64 @@
+# frontend_fo_application_streaming/pubspec.yaml
 
 name: frontend_fo_application_streaming
-description: Application de streaming
-
+description: "Application de streaming Flutter"
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: ">=3.10.0"
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  
-  # UI et navigation
+
+  # UI et Navigation
   cupertino_icons: ^1.0.2
-  flutter_svg: ^2.0.7
-  cached_network_image: ^3.3.0
-  shimmer: ^3.0.0
   
-  # État et gestion des données
+  # Gestion d'état
   provider: ^6.1.1
   
   # Réseau et API
   http: ^1.1.0
+  dio: ^5.4.0
   
   # Stockage sécurisé
-  flutter_secure_storage: ^9.0.0
+  
+  # Lecture vidéo et WebView
+  youtube_player_flutter: ^8.1.2
+  
+  # Images et SVG
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.0
+  
+  # Animations et squelettes
+  shimmer: ^3.0.0
+  lottie: ^2.7.0
   
   # Sérialisation JSON
   json_annotation: ^4.8.1
   
-  # Internationalisation
-  intl: ^0.18.1
+  # Utilitaires
+  intl: ^0.19.0
   
-  # Lecteur vidéo - Solution alternative plus stable
-  video_player: ^2.8.1
-  webview_flutter: ^4.4.2
-  
-  # Pour les URLs YouTube (alternative à youtube_player_flutter)
-  url_launcher: ^6.2.1
+  webview_flutter: ^4.4.2  # Version stable
 
+  url_launcher: ^6.2.1
+  flutter_secure_storage: ^9.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  
+  # Linting
   flutter_lints: ^3.0.0
-  json_serializable: ^6.7.1
+  
+  # Génération de code
   build_runner: ^2.4.7
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
+  
   assets:
     - assets/images/
-
-
-# Réinst

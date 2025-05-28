@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
-import 'package:frontend_fo_application_streaming/services/streaming_service.dart';
+import 'package:frontend_fo_application_streaming/domain/services/streaming_service.dart';
 
 class WebPlayerScreen extends StatefulWidget {
   final String title;
@@ -56,13 +56,7 @@ class _WebPlayerScreenState extends State<WebPlayerScreen> {
           mediaType: widget.mediaType,
           season: widget.season,
           episode: widget.episode,
-        ),
-        StreamingService.buildAlternativeUrl(
-          tmdbId: widget.tmdbId,
-          mediaType: widget.mediaType,
-          season: widget.season,
-          episode: widget.episode,
-        ),
+        )
       ];
     } catch (e) {
       setState(() {

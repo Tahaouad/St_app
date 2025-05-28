@@ -151,21 +151,23 @@ class TMDBService {
 
   // Méthodes de streaming
  generateMovieStreamUrl(tmdbId, imdbId = null, options = {}) {
-  const domains = ['vidsrc.xyz', 'vidsrc.cc', 'multiembed.mov'];
+  const domains = ['vidsrc.xyz', 'vidsrc.cc', 'vidsrc.in'];
   const domain = domains[0];
   
-  // URL principale avec fallback
   const params = new URLSearchParams();
   
-  if (imdbId) {
+  // Priorité à l'IMDB ID si disponible
+  if (imdbId && imdbId.startsWith('tt')) {
     params.append('imdb', imdbId);
   } else {
     params.append('tmdb', tmdbId);
   }
   
-  if (options.subtitle_lang) params.append('ds_lang', options.subtitle_lang);
+  if (options.subtitle_lang) {
+    params.append('ds_lang', options.subtitle_lang);
+  }
   
-  return `https://${domain}/embed/movie?${params.toString()}`;
+  return `https://${domain}/embed/movie?${params.toString()}`.trim();
 }
 
 generateEpisodeStreamUrl(tmdbId, season, episode, imdbId = null, options = {}) {

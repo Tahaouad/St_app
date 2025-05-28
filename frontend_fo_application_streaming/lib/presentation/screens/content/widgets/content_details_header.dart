@@ -1,4 +1,3 @@
-// lib/presentation/screens/content/widgets/content_details_header.dart
 import 'package:flutter/material.dart';
 import 'package:frontend_fo_application_streaming/core/constants/colors.dart';
 import 'package:frontend_fo_application_streaming/core/models/content_details.dart';
@@ -6,6 +5,7 @@ import 'package:frontend_fo_application_streaming/core/models/content_enums.dart
 import 'package:frontend_fo_application_streaming/presentation/screens/player/trailer_player.dart';
 import 'package:frontend_fo_application_streaming/presentation/screens/player/video_player_screen.dart';
 import 'package:frontend_fo_application_streaming/domain/services/streaming_service.dart';
+import 'package:frontend_fo_application_streaming/presentation/screens/player/simple_video_player.dart';
 
 class ContentDetailsHeader extends StatefulWidget {
   final ContentDetails contentDetails;
@@ -202,9 +202,10 @@ class _ContentDetailsHeaderState extends State<ContentDetailsHeader> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => TrailerPlayer(
+                    builder: (context) => SimpleVideoPlayer(
                       title: widget.contentDetails.title,
-                      youtubeUrl: widget.contentDetails.trailerUrl!,
+                      streamUrl:
+                          'https://vidsrc.xyz/embed/movie?tmdb=${widget.contentDetails.id}',
                     ),
                   ),
                 );
@@ -231,20 +232,27 @@ class _ContentDetailsHeaderState extends State<ContentDetailsHeader> {
     });
 
     try {
-      final streamingService = StreamingService();
-      Map<String, dynamic> result;
+      String? streamUrl;
 
       if (widget.contentDetails.type == ContentType.movie) {
-        result =
-            await streamingService.getMovieStreamUrl(widget.contentDetails.id);
+        // Essayer d'obtenir l'URL depuis l'API
+        final result = await StreamingService()
+            .getMovieStreamUrl(widget.contentDetails.id);
+        if (result['success']) {
+          streamUrl = result['data']['streamUrl'];
+        }
       } else {
+        // Pour les séries, prendre le premier épisode de la première saison
         if (widget.contentDetails.seasons != null &&
             widget.contentDetails.seasons!.isNotEmpty) {
-          result = await streamingService.getEpisodeStreamUrl(
+          final result = await StreamingService().getEpisodeStreamUrl(
             widget.contentDetails.id,
             1, // Première saison
             1, // Premier épisode
           );
+          if (result['success']) {
+            streamUrl = result['data']['streamUrl'];
+          }
         } else {
           if (mounted) {
             _showErrorSnackBar('Aucun épisode disponible pour cette série.');
@@ -254,29 +262,46 @@ class _ContentDetailsHeaderState extends State<ContentDetailsHeader> {
       }
 
       if (mounted) {
-        if (result['success']) {
-          final streamData = result['data'];
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => VideoPlayerScreen(
-                title: streamData['title'] ?? widget.contentDetails.title,
-                streamUrl: streamData['streamUrl'],
-                isEpisode: widget.contentDetails.type == ContentType.series,
-                season: streamData['season'],
-                episode: streamData['episode'],
-              ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoPlayerScreen(
+              title: widget.contentDetails.title,
+              streamUrl: streamUrl, // URL de l'API si disponible
+              tmdbId: widget
+                  .contentDetails.id, // ID pour générer des URLs alternatives
+              mediaType: widget.contentDetails.type == ContentType.movie
+                  ? 'movie'
+                  : 'tv',
+              isEpisode: widget.contentDetails.type == ContentType.series,
+              season:
+                  widget.contentDetails.type == ContentType.series ? 1 : null,
+              episode:
+                  widget.contentDetails.type == ContentType.series ? 1 : null,
             ),
-          );
-        } else {
-          _showErrorSnackBar(result['message'] ?? 'Erreur lors de la lecture');
-        }
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar(
-            'Erreur de connexion: Vérifiez votre connexion internet');
+        // Même en cas d'erreur API, on peut toujours essayer avec les URLs alternatives
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoPlayerScreen(
+              title: widget.contentDetails.title,
+              tmdbId: widget.contentDetails.id,
+              mediaType: widget.contentDetails.type == ContentType.movie
+                  ? 'movie'
+                  : 'tv',
+              isEpisode: widget.contentDetails.type == ContentType.series,
+              season:
+                  widget.contentDetails.type == ContentType.series ? 1 : null,
+              episode:
+                  widget.contentDetails.type == ContentType.series ? 1 : null,
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
