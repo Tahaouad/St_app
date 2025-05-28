@@ -1,502 +1,1157 @@
-import { Component, OnInit } from '@angular/core';
-import { AlertController, ToastController, ActionSheetController, ModalController } from '@ionic/angular';
-import { TaskService } from '../../core/services/task.service';
-import { NotificationService } from '../../core/services/notification.service';
-import { StorageService } from '../../core/services/storage.service';
-import { Task, TaskPriority, TaskStatus } from '../../core/models/task.model';
-import { Category } from '../../core/models/category.model';
+// ================================================================
+// REMPLACER src/app/features/home/home.component.ts
+// ================================================================
+
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import { Subject, forkJoin } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { AuthService, User } from '../../core/services/auth.service';
+import { ContentService } from '../../core/services/content.service';
+import { HorizontalListComponent } from '../../shared/components/horizontal-list/horizontal-list.component';
+import { Movie, Series, Favorite, WatchHistory } from '../../core/models/content.model';
 
 @Component({
   selector: 'app-home',
-  templateUrl: './home.component.html',
-  styleUrls: ['./home.component.scss']
+  standalone: true,
+  imports: [CommonModule, HorizontalListComponent],
+  template: `
+    <div class="home-container">
+      <!-- Header avec AppBar flottant -->
+      <header class="app-header" [class.scrolled]="isScrolled">
+        <div class="container">
+          <div class="header-content">
+            <!-- Menu burger pour mobile -->
+            <button class="menu-btn" (click)="toggleSidebar()">
+              <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Logo -->
+            <div class="logo" [class.hidden]="!isScrolled">
+              <h1>MoroccanFlix</h1>
+            </div>
+            
+            <!-- Navigation desktop -->
+            <nav class="nav-desktop">
+              <a href="#" class="nav-link" [class.active]="activeSection === 'home'" (click)="setActiveSection('home')">Accueil</a>
+              <a href="#" class="nav-link" [class.active]="activeSection === 'series'" (click)="setActiveSection('series')">Séries</a>
+              <a href="#" class="nav-link" [class.active]="activeSection === 'movies'" (click)="setActiveSection('movies')">Films</a>
+              <a href="#" class="nav-link" [class.active]="activeSection === 'favorites'" (click)="setActiveSection('favorites')">Ma liste</a>
+            </nav>
+            
+            <!-- Actions -->
+            <div class="header-actions">
+              <button class="search-btn" (click)="toggleSearch()">
+                <i class="fas fa-search"></i>
+              </button>
+              <div class="user-menu" (click)="toggleUserMenu()">
+                <img [src]="currentUser?.avatar" [alt]="currentUser?.name" class="user-avatar">
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              
+              <!-- Dropdown menu utilisateur -->
+              <div class="user-dropdown" [class.show]="showUserMenu">
+                <div class="user-info">
+                  <img [src]="currentUser?.avatar" [alt]="currentUser?.name">
+                  <div>
+                    <div class="user-name">{{ currentUser?.name }}</div>
+                    <div class="user-email">{{ currentUser?.email }}</div>
+                  </div>
+                </div>
+                <hr>
+                <a href="#" class="dropdown-item">
+                  <i class="fas fa-user"></i>
+                  Mon profil
+                </a>
+                <a href="#" class="dropdown-item">
+                  <i class="fas fa-cog"></i>
+                  Paramètres
+                </a>
+                <a href="#" class="dropdown-item" (click)="setActiveSection('favorites')">
+                  <i class="fas fa-heart"></i>
+                  Ma liste
+                </a>
+                <hr>
+                <button class="dropdown-item logout-btn" (click)="logout()">
+                  <i class="fas fa-sign-out-alt"></i>
+                  Se déconnecter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Sidebar pour mobile -->
+      <aside class="sidebar" [class.open]="sidebarOpen">
+        <div class="sidebar-header">
+          <h2>MoroccanFlix</h2>
+          <button class="close-btn" (click)="toggleSidebar()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#" class="sidebar-link" [class.active]="activeSection === 'home'" (click)="setActiveSection('home')">
+            <i class="fas fa-home"></i>
+            Accueil
+          </a>
+          <a href="#" class="sidebar-link" [class.active]="activeSection === 'series'" (click)="setActiveSection('series')">
+            <i class="fas fa-tv"></i>
+            Séries
+          </a>
+          <a href="#" class="sidebar-link" [class.active]="activeSection === 'movies'" (click)="setActiveSection('movies')">
+            <i class="fas fa-film"></i>
+            Films
+          </a>
+          <a href="#" class="sidebar-link" [class.active]="activeSection === 'favorites'" (click)="setActiveSection('favorites')">
+            <i class="fas fa-heart"></i>
+            Ma liste
+          </a>
+          <a href="#" class="sidebar-link">
+            <i class="fas fa-download"></i>
+            Téléchargements
+          </a>
+          <a href="#" class="sidebar-link">
+            <i class="fas fa-history"></i>
+            Historique
+          </a>
+        </nav>
+      </aside>
+
+      <!-- Overlay pour sidebar mobile -->
+      <div class="sidebar-overlay" [class.show]="sidebarOpen" (click)="toggleSidebar()"></div>
+
+      <!-- Contenu principal -->
+      <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero-section" *ngIf="activeSection === 'home' && featuredContent">
+          <div class="hero-background">
+            <img [src]="featuredContent.posterUrl || '/assets/images/welcome.jpg'" [alt]="featuredContent.title">
+            <div class="hero-overlay"></div>
+          </div>
+          
+          <div class="hero-content">
+            <div class="container">
+              <div class="hero-text">
+                <div class="badge">{{ featuredContent.releaseYear ? 'FILM' : 'SÉRIE' }}</div>
+                <h1 class="hero-title">{{ featuredContent.title }}</h1>
+                <div class="hero-meta">
+                  <div class="rating-chip" *ngIf="featuredContent.ratingAVG">
+                    <i class="fas fa-star"></i>
+                    <span>{{ featuredContent.ratingAVG.toFixed(1) }}</span>
+                  </div>
+                  <span class="meta-text" *ngIf="featuredContent.releaseYear">
+                    {{ featuredContent.releaseYear }} • 4K Ultra HD
+                  </span>
+                </div>
+                <p class="hero-description">
+                  {{ featuredContent.description }}
+                </p>
+                <div class="hero-actions">
+                  <button class="btn btn-primary btn-lg" (click)="playContent(featuredContent)">
+                    <i class="fas fa-play"></i>
+                    Lecture
+                  </button>
+                  <button class="btn btn-secondary" (click)="toggleFavorite(featuredContent)">
+                    <i [class]="isFavorite(featuredContent) ? 'fas fa-check' : 'fas fa-plus'"></i>
+                    {{ isFavorite(featuredContent) ? 'Dans ma liste' : 'Ma liste' }}
+                  </button>
+                  <button class="btn btn-ghost" (click)="showInfo(featuredContent)">
+                    <i class="fas fa-info-circle"></i>
+                    Infos
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Categories -->
+        <section class="categories-section" *ngIf="activeSection === 'home'">
+          <div class="container">
+            <div class="categories-scroll">
+              <button 
+                class="category-btn" 
+                [class.active]="selectedCategory === 'all'"
+                (click)="selectCategory('all')"
+              >
+                Pour vous
+              </button>
+              <button 
+                class="category-btn"
+                [class.active]="selectedCategory === 'series'"
+                (click)="selectCategory('series')"
+              >
+                Séries
+              </button>
+              <button 
+                class="category-btn"
+                [class.active]="selectedCategory === 'movies'"
+                (click)="selectCategory('movies')"
+              >
+                Films
+              </button>
+              <button 
+                class="category-btn"
+                [class.active]="selectedCategory === 'favorites'"
+                (click)="selectCategory('favorites')"
+              >
+                Ma liste
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Loading State -->
+        <div class="loading-container" *ngIf="isLoading">
+          <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Chargement du contenu...</p>
+          </div>
+        </div>
+
+        <!-- Content Sections -->
+        <section class="content-sections" *ngIf="!isLoading">
+          <div class="container">
+            
+            <!-- Section Accueil -->
+            <div *ngIf="activeSection === 'home'">
+              <!-- Continuer à regarder -->
+              <app-horizontal-list
+                *ngIf="continueWatching.length > 0"
+                title="Continuer à regarder"
+                icon="fas fa-play-circle"
+                [items]="continueWatching"
+                [showInfo]="true"
+                [favoritesIds]="favoritesIds"
+                [watchProgressData]="watchProgressData"
+                (play)="playContent($event)"
+                (favorite)="toggleFavoriteFromList($event)"
+                (info)="showInfo($event)"
+                (cardClick)="showInfo($event)"
+              ></app-horizontal-list>
+
+              <!-- Films tendances -->
+              <app-horizontal-list
+                *ngIf="trendingMovies.length > 0"
+                title="Tendances films"
+                icon="fas fa-trending-up"
+                [items]="trendingMovies"
+                [favoritesIds]="favoritesIds"
+                [newItemsIds]="newMoviesIds"
+                (play)="playContent($event)"
+                (favorite)="toggleFavoriteFromList($event)"
+                (info)="showInfo($event)"
+                (cardClick)="showInfo($event)"
+              ></app-horizontal-list>
+
+              <!-- Nouvelles séries -->
+              <app-horizontal-list
+                *ngIf="newSeries.length > 0"
+                title="Nouvelles séries"
+                icon="fas fa-sparkles"
+                [items]="newSeries"
+                [favoritesIds]="favoritesIds"
+                [newItemsIds]="newSeriesIds"
+                (play)="playContent($event)"
+                (favorite)="toggleFavoriteFromList($event)"
+                (info)="showInfo($event)"
+                (cardClick)="showInfo($event)"
+              ></app-horizontal-list>
+
+              <!-- Recommandations -->
+              <app-horizontal-list
+                *ngIf="recommendedMovies.length > 0"
+                title="Recommandé pour vous"
+                icon="fas fa-thumbs-up"
+                [items]="recommendedMovies"
+                [favoritesIds]="favoritesIds"
+                (play)="playContent($event)"
+                (favorite)="toggleFavoriteFromList($event)"
+                (info)="showInfo($event)"
+                (cardClick)="showInfo($event)"
+              ></app-horizontal-list>
+            </div>
+
+            <!-- Section Films -->
+            <div *ngIf="activeSection === 'movies'">
+              <app-horizontal-list
+                *ngIf="allMovies.length > 0"
+                title="Tous les films"
+                icon="fas fa-film"
+                [items]="allMovies"
+                [favoritesIds]="favoritesIds"
+                [watchProgressData]="watchProgressData"
+                (play)="playContent($event)"
+                (favorite)="toggleFavoriteFromList($event)"
+                (info)="showInfo($event)"
+                (cardClick)="showInfo($event)"
+              ></app-horizontal-list>
+            </div>
+
+            <!-- Section Séries -->
+            <div *ngIf="activeSection === 'series'">
+              <app-horizontal-list
+                *ngIf="allSeries.length > 0"
+                title="Toutes les séries"
+                icon="fas fa-tv"
+                [items]="allSeries"
+                [favoritesIds]="favoritesIds"
+                [watchProgressData]="watchProgressData"
+                (play)="playContent($event)"
+                (favorite)="toggleFavoriteFromList($event)"
+                (info)="showInfo($event)"
+                (cardClick)="showInfo($event)"
+              ></app-horizontal-list>
+            </div>
+
+            <!-- Section Favoris -->
+            <div *ngIf="activeSection === 'favorites'">
+              <app-horizontal-list
+                *ngIf="favoriteItems.length > 0"
+                title="Ma liste"
+                icon="fas fa-heart"
+                [items]="favoriteItems"
+                [favoritesIds]="favoritesIds"
+                [watchProgressData]="watchProgressData"
+                [showSeeAll]="false"
+                (play)="playContent($event)"
+                (favorite)="toggleFavoriteFromList($event)"
+                (info)="showInfo($event)"
+                (cardClick)="showInfo($event)"
+              ></app-horizontal-list>
+
+              <div class="empty-state" *ngIf="favoriteItems.length === 0">
+                <i class="fas fa-heart"></i>
+                <h3>Votre liste est vide</h3>
+                <p>Ajoutez des films et séries à votre liste pour les retrouver facilement</p>
+                <button class="btn btn-primary" (click)="setActiveSection('home')">
+                  Découvrir du contenu
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+      </main>
+    </div>
+  `,
+  styles: [`
+    /* Reprise des styles du composant précédent + nouveaux styles */
+    .home-container {
+      min-height: 100vh;
+      background: var(--background);
+    }
+
+    /* Header styles (identiques au précédent) */
+    .app-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: transparent;
+      transition: all 0.3s ease;
+      padding: var(--spacing-md) 0;
+    }
+
+    .app-header.scrolled {
+      background: rgba(20, 20, 20, 0.95);
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow-header);
+      padding: var(--spacing-sm) 0;
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-lg);
+    }
+
+    .menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: var(--spacing-sm);
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+    }
+
+    .menu-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+      .menu-btn {
+        display: block;
+      }
+    }
+
+    .logo {
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
+    }
+
+    .logo:not(.hidden) {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .logo h1 {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin: 0;
+    }
+
+    .nav-desktop {
+      display: flex;
+      gap: var(--spacing-lg);
+    }
+
+    @media (max-width: 768px) {
+      .nav-desktop {
+        display: none;
+      }
+    }
+
+    .nav-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+      position: relative;
+    }
+
+    .nav-link:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-link.active {
+      color: var(--text-primary);
+    }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--primary);
+      border-radius: 1px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      position: relative;
+    }
+
+    .search-btn {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.125rem;
+      cursor: pointer;
+      padding: var(--spacing-sm);
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+    }
+
+    .search-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--primary);
+    }
+
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      cursor: pointer;
+      padding: var(--spacing-xs);
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+    }
+
+    .user-menu:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      object-fit: cover;
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: rgba(20, 20, 20, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-lg);
+      min-width: 280px;
+      box-shadow: var(--shadow-card);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
+      margin-top: var(--spacing-sm);
+    }
+
+    .user-dropdown.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-lg);
+    }
+
+    .user-info img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      object-fit: cover;
+    }
+
+    .user-name {
+      color: var(--text-primary);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .user-email {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md) var(--spacing-lg);
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .dropdown-item i {
+      width: 16px;
+      font-size: 0.875rem;
+    }
+
+    .logout-btn {
+      color: var(--error);
+    }
+
+    .logout-btn:hover {
+      background: rgba(244, 67, 54, 0.1);
+      color: var(--error);
+    }
+
+    /* Sidebar styles */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -300px;
+      width: 300px;
+      height: 100vh;
+      background: rgba(20, 20, 20, 0.98);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 1001;
+      transition: left 0.3s ease;
+      overflow-y: auto;
+    }
+
+    .sidebar.open {
+      left: 0;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-lg);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-header h2 {
+      color: var(--primary);
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: var(--spacing-sm);
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--primary);
+    }
+
+    .sidebar-nav {
+      padding: var(--spacing-lg) 0;
+    }
+
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      padding: var(--spacing-md) var(--spacing-lg);
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-link:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .sidebar-link.active {
+      background: rgba(229, 9, 20, 0.1);
+      color: var(--primary);
+      border-right: 3px solid var(--primary);
+    }
+
+    .sidebar-link i {
+      width: 20px;
+      font-size: 1rem;
+    }
+
+    .sidebar-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Main Content */
+    .main-content {
+      padding-top: 80px;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      position: relative;
+      height: 70vh;
+      min-height: 500px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+    }
+
+    .hero-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: -2;
+    }
+
+    .hero-background img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .hero-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.1) 0%,
+        rgba(0, 0, 0, 0.3) 30%,
+        rgba(0, 0, 0, 0.7) 50%,
+        rgba(0, 0, 0, 0.9) 80%,
+        var(--background) 100%
+      );
+      z-index: -1;
+    }
+
+    .hero-content {
+      width: 100%;
+      padding-bottom: var(--spacing-2xl);
+    }
+
+    .hero-text {
+      max-width: 600px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      padding: 4px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .hero-title {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin: 0 0 var(--spacing-md) 0;
+      color: var(--text-primary);
+    }
+
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .rating-chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #FFA000;
+      color: #000;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+
+    .meta-text {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+
+    .hero-description {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: var(--spacing-xl);
+      max-width: 500px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      flex-wrap: wrap;
+    }
+
+    /* Categories */
+    .categories-section {
+      padding: var(--spacing-lg) 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .categories-scroll {
+      display: flex;
+      gap: var(--spacing-md);
+      overflow-x: auto;
+      padding-bottom: var(--spacing-sm);
+    }
+
+    .categories-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .category-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: var(--text-secondary);
+      padding: var(--spacing-sm) var(--spacing-lg);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    .category-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .category-btn.active {
+      background: rgba(229, 9, 20, 0.2);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Content Sections */
+    .content-sections {
+      padding: var(--spacing-2xl) 0;
+    }
+
+    /* Loading State */
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 300px;
+    }
+
+    .loading-spinner {
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .loading-spinner i {
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: var(--spacing-md);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: var(--spacing-2xl);
+      color: var(--text-secondary);
+    }
+
+    .empty-state i {
+      font-size: 4rem;
+      color: var(--primary);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .empty-state h3 {
+      color: var(--text-primary);
+      font-size: 1.5rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .empty-state p {
+      margin-bottom: var(--spacing-xl);
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .main-content {
+        padding-top: 70px;
+      }
+
+      .hero-section {
+        height: 60vh;
+        min-height: 400px;
+      }
+
+      .hero-actions .btn {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 0.875rem;
+      }
+    }
+
+    /* Animations */
+    .animate-fade-in {
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  `]
 })
-export class HomeComponent implements OnInit {
-  tasks: Task[] = [];
-  categories: Category[] = [];
-  filteredTasks: Task[] = [];
+export class HomeComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
   
-  // Filtres
-  selectedCategory = 'all';
-  selectedPriority = 'all';
-  selectedStatus = 'all';
-  searchTerm = '';
+  currentUser: User | null = null;
+  isScrolled = false;
+  sidebarOpen = false;
+  showUserMenu = false;
+  showSearch = false;
+  isLoading = true;
   
-  // Vue et tri
-  viewMode: 'list' | 'grid' | 'calendar' = 'list';
-  sortBy: 'dueDate' | 'priority' | 'createdAt' | 'title' = 'dueDate';
-  sortOrder: 'asc' | 'desc' = 'asc';
-  
-  // États de l'interface
-  isLoading = false;
-  showCompleted = false;
-  
-  // Statistiques
-  stats = {
-    total: 0,
-    completed: 0,
-    pending: 0,
-    overdue: 0,
-    today: 0
-  };
+  // Navigation
+  activeSection: 'home' | 'movies' | 'series' | 'favorites' = 'home';
+  selectedCategory: string = 'all';
+
+  // Contenu
+  featuredContent: Movie | Series | null = null;
+  trendingMovies: Movie[] = [];
+  newSeries: Series[] = [];
+  recommendedMovies: Movie[] = [];
+  allMovies: Movie[] = [];
+  allSeries: Series[] = [];
+  favoriteItems: (Movie | Series)[] = [];
+  continueWatching: (Movie | Series)[] = [];
+
+  // Données pour les composants
+  favoritesIds: number[] = [];
+  watchProgressData: { [key: string]: number } = {};
+  newMoviesIds: number[] = [];
+  newSeriesIds: number[] = [];
 
   constructor(
-    private taskService: TaskService,
-    private notificationService: NotificationService,
-    private storageService: StorageService,
-    private alertController: AlertController,
-    private toastController: ToastController,
-    private actionSheetController: ActionSheetController,
-    private modalController: ModalController
+    private authService: AuthService,
+    private contentService: ContentService,
+    private router: Router
   ) {}
 
-  ngOnInit() {
-    this.loadData();
-    this.loadUserPreferences();
+  ngOnInit(): void {
+    console.log('🏠 Home Component initialisé');
+    this.loadUserProfile();
+    this.loadContent();
   }
 
-  ionViewWillEnter() {
-    this.refreshTasks();
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  async loadData() {
+  @HostListener('window:scroll', ['$event'])
+  onScroll(): void {
+    this.isScrolled = window.scrollY > 100;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.user-menu') && !target.closest('.user-dropdown')) {
+      this.showUserMenu = false;
+    }
+  }
+
+  private loadUserProfile(): void {
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        this.currentUser = user;
+        if (!user) {
+          this.authService.loadUserProfile().subscribe();
+        }
+      });
+  }
+
+  private loadContent(): void {
     this.isLoading = true;
     
-    try {
-      await Promise.all([
-        this.loadTasks(),
-        this.loadCategories()
-      ]);
-      
-      this.applyFilters();
-      this.updateStats();
-    } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
-      this.showToast('Erreur lors du chargement des données', 'danger');
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  async loadTasks() {
-    this.tasks = await this.taskService.getTasks();
-  }
-
-  async loadCategories() {
-    this.categories = await this.taskService.getCategories();
-  }
-
-  async loadUserPreferences() {
-    const preferences = await this.storageService.get('userPreferences');
-    if (preferences) {
-      this.viewMode = preferences.viewMode || 'list';
-      this.sortBy = preferences.sortBy || 'dueDate';
-      this.sortOrder = preferences.sortOrder || 'asc';
-      this.showCompleted = preferences.showCompleted || false;
-    }
-  }
-
-  async saveUserPreferences() {
-    const preferences = {
-      viewMode: this.viewMode,
-      sortBy: this.sortBy,
-      sortOrder: this.sortOrder,
-      showCompleted: this.showCompleted
-    };
-    await this.storageService.set('userPreferences', preferences);
-  }
-
-  async refreshTasks(event?: any) {
-    await this.loadTasks();
-    this.applyFilters();
-    this.updateStats();
-    
-    if (event) {
-      event.target.complete();
-    }
-  }
-
-  applyFilters() {
-    let filtered = [...this.tasks];
-
-    // Filtre par catégorie
-    if (this.selectedCategory !== 'all') {
-      filtered = filtered.filter(task => task.categoryId === this.selectedCategory);
-    }
-
-    // Filtre par priorité
-    if (this.selectedPriority !== 'all') {
-      filtered = filtered.filter(task => task.priority === this.selectedPriority);
-    }
-
-    // Filtre par statut
-    if (this.selectedStatus !== 'all') {
-      filtered = filtered.filter(task => task.status === this.selectedStatus);
-    }
-
-    // Masquer/afficher les tâches terminées
-    if (!this.showCompleted) {
-      filtered = filtered.filter(task => task.status !== TaskStatus.COMPLETED);
-    }
-
-    // Recherche textuelle
-    if (this.searchTerm.trim()) {
-      const term = this.searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(task =>
-        task.title.toLowerCase().includes(term) ||
-        task.description?.toLowerCase().includes(term) ||
-        task.tags?.some(tag => tag.toLowerCase().includes(term))
-      );
-    }
-
-    // Tri
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (this.sortBy) {
-        case 'title':
-          comparison = a.title.localeCompare(b.title);
-          break;
-        case 'priority':
-          const priorityOrder = { high: 3, medium: 2, low: 1 };
-          comparison = priorityOrder[b.priority] - priorityOrder[a.priority];
-          break;
-        case 'dueDate':
-          if (!a.dueDate && !b.dueDate) comparison = 0;
-          else if (!a.dueDate) comparison = 1;
-          else if (!b.dueDate) comparison = -1;
-          else comparison = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-          break;
-        case 'createdAt':
-          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          break;
+    // Charger tout le contenu en parallèle
+    forkJoin({
+      movies: this.contentService.getMovies(1, 50),
+      series: this.contentService.getSeries(1, 50),
+      trendingMovies: this.contentService.getTrendingMovies(),
+      recommendedMovies: this.contentService.getRecommendedMovies(),
+      favorites: this.contentService.getFavorites(),
+      watchHistory: this.contentService.getWatchHistory()
+    }).pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (data) => {
+        console.log('📊 Données chargées:', data);
+        
+        // Films et séries
+        if (data.movies.success) {
+          this.allMovies = data.movies.data;
+          this.trendingMovies = data.trendingMovies || this.allMovies.slice(0, 10);
+        }
+        
+        if (data.series.success) {
+          this.allSeries = data.series.data;
+          this.newSeries = this.allSeries.slice(0, 10);
+        }
+        
+        this.recommendedMovies = data.recommendedMovies || this.allMovies.slice(5, 15);
+        
+        // Contenu vedette (premier film ou série)
+        this.featuredContent = this.trendingMovies[0] || this.allMovies[0] || this.allSeries[0];
+        
+        // Favoris
+        this.processFavorites(data.favorites);
+        
+        // Historique de visionnage
+        this.processWatchHistory(data.watchHistory);
+        
+        // Identifiants des nouveaux contenus (simplification)
+        this.newMoviesIds = this.allMovies.slice(0, 5).map(m => m.id);
+        this.newSeriesIds = this.allSeries.slice(0, 5).map(s => s.id);
+        
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement:', error);
+        this.isLoading = false;
+        // Utiliser des données mockées en cas d'erreur
+        this.loadMockData();
       }
-      
-      return this.sortOrder === 'asc' ? comparison : -comparison;
     });
-
-    this.filteredTasks = filtered;
   }
 
-  updateStats() {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-
-    this.stats = {
-      total: this.tasks.length,
-      completed: this.tasks.filter(task => task.status === TaskStatus.COMPLETED).length,
-      pending: this.tasks.filter(task => task.status === TaskStatus.PENDING).length,
-      overdue: this.tasks.filter(task => 
-        task.dueDate && 
-        new Date(task.dueDate) < today && 
-        task.status !== TaskStatus.COMPLETED
-      ).length,
-      today: this.tasks.filter(task => 
-        task.dueDate && 
-        new Date(task.dueDate) >= today && 
-        new Date(task.dueDate) < tomorrow
-      ).length
-    };
-  }
-
-  async toggleTaskStatus(task: Task) {
-    const newStatus = task.status === TaskStatus.COMPLETED 
-      ? TaskStatus.PENDING 
-      : TaskStatus.COMPLETED;
+  private processFavorites(favorites: Favorite[]): void {
+    this.favoritesIds = [];
+    this.favoriteItems = [];
     
-    const updatedTask = { ...task, status: newStatus };
-    
-    if (newStatus === TaskStatus.COMPLETED) {
-      updatedTask.completedAt = new Date().toISOString();
-    } else {
-      updatedTask.completedAt = undefined;
-    }
-
-    try {
-      await this.taskService.updateTask(updatedTask);
-      await this.refreshTasks();
-      
-      const message = newStatus === TaskStatus.COMPLETED 
-        ? 'Tâche marquée comme terminée' 
-        : 'Tâche marquée comme en cours';
-      
-      this.showToast(message, 'success');
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error);
-      this.showToast('Erreur lors de la mise à jour de la tâche', 'danger');
-    }
+    favorites.forEach(fav => {
+      if (fav.movie) {
+        this.favoritesIds.push(fav.movie.id);
+        this.favoriteItems.push(fav.movie);
+      }
+      if (fav.series) {
+        this.favoritesIds.push(fav.series.id);
+        this.favoriteItems.push(fav.series);
+      }
+    });
   }
 
-  async deleteTask(task: Task) {
-    const alert = await this.alertController.create({
-      header: 'Confirmer la suppression',
-      message: `Êtes-vous sûr de vouloir supprimer la tâche "${task.title}" ?`,
-      buttons: [
-        {
-          text: 'Annuler',
-          role: 'cancel'
-        },
-        {
-          text: 'Supprimer',
-          role: 'destructive',
-          handler: async () => {
-            try {
-              await this.taskService.deleteTask(task.id);
-              await this.refreshTasks();
-              this.showToast('Tâche supprimée', 'success');
-            } catch (error) {
-              console.error('Erreur lors de la suppression:', error);
-              this.showToast('Erreur lors de la suppression', 'danger');
-            }
-          }
+  private processWatchHistory(history: WatchHistory[]): void {
+    this.watchProgressData = {};
+    this.continueWatching = [];
+    
+    history.forEach(item => {
+      if (item.progress > 0 && item.progress < 90) { // Pas terminé
+        const key = `${item.movieId || item.seriesId}`;
+        this.watchProgressData[key] = item.progress;
+        
+        if (item.movie) {
+          this.continueWatching.push(item.movie);
         }
-      ]
-    });
-
-    await alert.present();
-  }
-
-  async presentTaskActions(task: Task) {
-    const actionSheet = await this.actionSheetController.create({
-      header: task.title,
-      buttons: [
-        {
-          text: 'Modifier',
-          icon: 'create-outline',
-          handler: () => {
-            this.editTask(task);
-          }
-        },
-        {
-          text: task.status === TaskStatus.COMPLETED ? 'Marquer en cours' : 'Marquer terminée',
-          icon: task.status === TaskStatus.COMPLETED ? 'radio-button-off-outline' : 'checkmark-circle-outline',
-          handler: () => {
-            this.toggleTaskStatus(task);
-          }
-        },
-        {
-          text: 'Dupliquer',
-          icon: 'copy-outline',
-          handler: () => {
-            this.duplicateTask(task);
-          }
-        },
-        {
-          text: 'Supprimer',
-          icon: 'trash-outline',
-          role: 'destructive',
-          handler: () => {
-            this.deleteTask(task);
-          }
-        },
-        {
-          text: 'Annuler',
-          icon: 'close',
-          role: 'cancel'
+        if (item.series) {
+          this.continueWatching.push(item.series);
         }
-      ]
+      }
     });
-
-    await actionSheet.present();
   }
 
-  async duplicateTask(task: Task) {
-    const duplicatedTask: Partial<Task> = {
-      title: `${task.title} (copie)`,
-      description: task.description,
-      priority: task.priority,
-      categoryId: task.categoryId,
-      tags: [...(task.tags || [])],
-      status: TaskStatus.PENDING
-    };
-
-    try {
-      await this.taskService.createTask(duplicatedTask as Task);
-      await this.refreshTasks();
-      this.showToast('Tâche dupliquée', 'success');
-    } catch (error) {
-      console.error('Erreur lors de la duplication:', error);
-      this.showToast('Erreur lors de la duplication', 'danger');
-    }
+  private loadMockData(): void {
+    // Données d'exemple si l'API ne fonctionne pas
+    this.allMovies = [];
+    this.allSeries = [];
+    this.featuredContent = {
+      id: 1,
+      title: "Daredevil: Reborn",
+      description: "Matt Murdock combat l'injustice le jour comme avocat et la nuit comme justicier masqué.",
+      posterUrl: "/assets/images/welcome.jpg",
+      ratingAVG: 9.2
+    } as Movie;
   }
 
-  editTask(task: Task) {
-    // Navigation vers la page d'édition - à implémenter avec le router
-    // this.router.navigate(['/task-form', task.id]);
-    console.log('Éditer la tâche:', task);
+  // Actions de navigation
+  toggleSidebar(): void {
+    this.sidebarOpen = !this.sidebarOpen;
   }
 
-  createTask() {
-    // Navigation vers la page de création - à implémenter avec le router
-    // this.router.navigate(['/task-form']);
-    console.log('Créer une nouvelle tâche');
+  toggleUserMenu(): void {
+    this.showUserMenu = !this.showUserMenu;
   }
 
-  onCategoryChange(categoryId: string) {
-    this.selectedCategory = categoryId;
-    this.applyFilters();
+  toggleSearch(): void {
+    this.showSearch = !this.showSearch;
   }
 
-  onPriorityChange(priority: string) {
-    this.selectedPriority = priority;
-    this.applyFilters();
+  setActiveSection(section: 'home' | 'movies' | 'series' | 'favorites'): void {
+    this.activeSection = section;
+    this.sidebarOpen = false;
   }
 
-  onStatusChange(status: string) {
-    this.selectedStatus = status;
-    this.applyFilters();
+  selectCategory(category: string): void {
+    this.selectedCategory = category;
   }
 
-  onSearchChange(event: any) {
-    this.searchTerm = event.target.value;
-    this.applyFilters();
+  // Actions de contenu
+  playContent(content: Movie | Series): void {
+    console.log('▶️ Lecture de:', content.title);
+    // TODO: Implémenter le lecteur vidéo
   }
 
-  clearSearch() {
-    this.searchTerm = '';
-    this.applyFilters();
+  showInfo(content: Movie | Series): void {
+    console.log('ℹ️ Infos sur:', content.title);
+    // TODO: Implémenter la page de détail
   }
 
-  async changeViewMode(mode: 'list' | 'grid' | 'calendar') {
-    this.viewMode = mode;
-    await this.saveUserPreferences();
-  }
-
-  async changeSorting(sortBy: typeof this.sortBy) {
-    if (this.sortBy === sortBy) {
-      this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+  toggleFavorite(content: Movie | Series): void {
+    const isFav = this.isFavorite(content);
+    const movieId = 'duration' in content ? content.id : undefined;
+    const seriesId = 'duration' in content ? undefined : content.id;
+    
+    if (isFav) {
+      // Retirer des favoris
+      const favoriteItem = this.favoriteItems.find(item => item.id === content.id);
+      if (favoriteItem) {
+        // TODO: Appeler l'API pour supprimer
+        this.favoritesIds = this.favoritesIds.filter(id => id !== content.id);
+        this.favoriteItems = this.favoriteItems.filter(item => item.id !== content.id);
+      }
     } else {
-      this.sortBy = sortBy;
-      this.sortOrder = 'asc';
-    }
-    
-    this.applyFilters();
-    await this.saveUserPreferences();
-  }
-
-  async toggleShowCompleted() {
-    this.showCompleted = !this.showCompleted;
-    this.applyFilters();
-    await this.saveUserPreferences();
-  }
-
-  resetFilters() {
-    this.selectedCategory = 'all';
-    this.selectedPriority = 'all';
-    this.selectedStatus = 'all';
-    this.searchTerm = '';
-    this.applyFilters();
-  }
-
-  getPriorityColor(priority: TaskPriority): string {
-    switch (priority) {
-      case TaskPriority.HIGH:
-        return 'danger';
-      case TaskPriority.MEDIUM:
-        return 'warning';
-      case TaskPriority.LOW:
-        return 'success';
-      default:
-        return 'medium';
+      // Ajouter aux favoris
+      this.contentService.addToFavorites(movieId, seriesId).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.favoritesIds.push(content.id);
+            this.favoriteItems.push(content);
+          }
+        },
+        error: (error) => {
+          console.error('❌ Erreur ajout favori:', error);
+        }
+      });
     }
   }
 
-  getPriorityIcon(priority: TaskPriority): string {
-    switch (priority) {
-      case TaskPriority.HIGH:
-        return 'arrow-up-circle';
-      case TaskPriority.MEDIUM:
-        return 'remove-circle';
-      case TaskPriority.LOW:
-        return 'arrow-down-circle';
-      default:
-        return 'help-circle';
-    }
+  toggleFavoriteFromList(event: { content: Movie | Series, add: boolean }): void {
+    this.toggleFavorite(event.content);
   }
 
-  getCategoryName(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
-    return category ? category.name : 'Sans catégorie';
+  isFavorite(content: Movie | Series): boolean {
+    return this.favoritesIds.includes(content.id);
   }
 
-  getCategoryColor(categoryId: string): string {
-    const category = this.categories.find(cat => cat.id === categoryId);
-    return category ? category.color : 'medium';
-  }
-
-  isTaskOverdue(task: Task): boolean {
-    if (!task.dueDate || task.status === TaskStatus.COMPLETED) {
-      return false;
-    }
-    return new Date(task.dueDate) < new Date();
-  }
-
-  isTaskDueToday(task: Task): boolean {
-    if (!task.dueDate) {
-      return false;
-    }
-    
-    const today = new Date();
-    const taskDate = new Date(task.dueDate);
-    
-    return today.toDateString() === taskDate.toDateString();
-  }
-
-  formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return 'Aujourd\'hui';
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      return 'Demain';
-    } else {
-      return date.toLocaleDateString('fr-FR');
-    }
-  }
-
-  private async showToast(message: string, color: 'success' | 'warning' | 'danger' = 'success') {
-    const toast = await this.toastController.create({
-      message,
-      duration: 2000,
-      color,
-      position: 'bottom'
-    });
-    await toast.present();
-  }
-
-  // Gestion des gestes
-  onTaskSwipe(task: Task, direction: 'left' | 'right') {
-    if (direction === 'right') {
-      // Swipe droite : marquer comme terminé/en cours
-      this.toggleTaskStatus(task);
-    } else {
-      // Swipe gauche : afficher les actions
-      this.presentTaskActions(task);
-    }
-  }
-
-  // Export des tâches
-  async exportTasks() {
-    try {
-      const dataStr = JSON.stringify(this.tasks, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      
-      // Créer un lien de téléchargement
-      const url = window.URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `tasks-export-${new Date().toISOString().split('T')[0]}.json`;
-      link.click();
-      
-      window.URL.revokeObjectURL(url);
-      this.showToast('Tâches exportées avec succès', 'success');
-    } catch (error) {
-      console.error('Erreur lors de l\'export:', error);
-      this.showToast('Erreur lors de l\'export', 'danger');
-    }
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/welcome']);
   }
 }
