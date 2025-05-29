@@ -8,9 +8,10 @@ import { Router } from '@angular/router';
 import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService, User } from '../../core/services/auth.service';
-import { ContentService } from '../../core/services/content.service';
+import { ContentService, TMDBContent } from '../../core/services/content.service';
 import { HorizontalListComponent } from '../../shared/components/horizontal-list/horizontal-list.component';
 import { Movie, Series, Favorite, WatchHistory } from '../../core/models/content.model';
+import { OMDBService } from '../../core/services/omdb.service';
 
 @Component({
   selector: 'app-home',
@@ -923,14 +924,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   selectedCategory: string = 'all';
 
   // Contenu
-  featuredContent: Movie | Series | null = null;
-  trendingMovies: Movie[] = [];
-  newSeries: Series[] = [];
-  recommendedMovies: Movie[] = [];
-  allMovies: Movie[] = [];
-  allSeries: Series[] = [];
-  favoriteItems: (Movie | Series)[] = [];
-  continueWatching: (Movie | Series)[] = [];
+ featuredContent: TMDBContent | null = null;
+allMovies: TMDBContent[] = [];
+allSeries: TMDBContent[] = [];
+recommendedMovies: TMDBContent[] = [];
+trendingMovies: TMDBContent[] = [];
+newSeries: TMDBContent[] = [];
 
   // Données pour les composants
   favoritesIds: number[] = [];
@@ -941,6 +940,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private contentService: ContentService,
+    private omdbService: OMDBService, // <-- Ajouter ici
     private router: Router
   ) {}
 
@@ -980,57 +980,51 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private loadContent(): void {
-    this.isLoading = true;
-    
-    // Charger tout le contenu en parallèle
-    forkJoin({
-      movies: this.contentService.getMovies(1, 50),
-      series: this.contentService.getSeries(1, 50),
-      trendingMovies: this.contentService.getTrendingMovies(),
-      recommendedMovies: this.contentService.getRecommendedMovies(),
-      favorites: this.contentService.getFavorites(),
-      watchHistory: this.contentService.getWatchHistory()
-    }).pipe(takeUntil(this.destroy$))
+  this.isLoading = true;
+
+  // Combine TMDB + OMDB en parallèle
+  forkJoin({
+    tmdbMovies: this.contentService.getRecommendedMovies(),
+    tmdbSeries: this.contentService.getNewSeries(),
+    omdbMovies: this.omdbService.getPopularMovies(),
+    omdbSeries: this.omdbService.getPopularSeries()
+  }).pipe(takeUntil(this.destroy$))
     .subscribe({
-      next: (data) => {
-        console.log('📊 Données chargées:', data);
-        
-        // Films et séries
-        if (data.movies.success) {
-          this.allMovies = data.movies.data;
-          this.trendingMovies = data.trendingMovies || this.allMovies.slice(0, 10);
-        }
-        
-        if (data.series.success) {
-          this.allSeries = data.series.data;
-          this.newSeries = this.allSeries.slice(0, 10);
-        }
-        
-        this.recommendedMovies = data.recommendedMovies || this.allMovies.slice(5, 15);
-        
-        // Contenu vedette (premier film ou série)
+      next: ({ tmdbMovies, tmdbSeries, omdbMovies, omdbSeries }) => {
+        // Fusionner et dédupliquer (exemple simple, à affiner)
+        const allMovies = [...tmdbMovies, ...omdbMovies];
+        const allSeries = [...tmdbSeries, ...omdbSeries];
+
+        this.allMovies = this.removeDuplicates(allMovies);
+        this.allSeries = this.removeDuplicates(allSeries);
+
+        this.trendingMovies = this.allMovies.slice(0, 10);
+        this.newSeries = this.allSeries.slice(0, 10);
+        this.recommendedMovies = this.shuffleArray(this.allMovies).slice(0, 10);
         this.featuredContent = this.trendingMovies[0] || this.allMovies[0] || this.allSeries[0];
-        
-        // Favoris
-        this.processFavorites(data.favorites);
-        
-        // Historique de visionnage
-        this.processWatchHistory(data.watchHistory);
-        
-        // Identifiants des nouveaux contenus (simplification)
-        this.newMoviesIds = this.allMovies.slice(0, 5).map(m => m.id);
-        this.newSeriesIds = this.allSeries.slice(0, 5).map(s => s.id);
-        
+
+        this.newMoviesIds = this.allMovies.slice(0, 5).map(c => c.id);
+        this.newSeriesIds = this.allSeries.slice(0, 5).map(c => c.id);
+
         this.isLoading = false;
       },
-      error: (error) => {
-        console.error('❌ Erreur lors du chargement:', error);
-        this.isLoading = false;
-        // Utiliser des données mockées en cas d'erreur
+      error: (err) => {
+        console.error('❌ Erreur chargement contenu mixte TMDB/OMDB', err);
         this.loadMockData();
+        this.isLoading = false;
       }
     });
-  }
+}
+private removeDuplicates(contents: TMDBContent[]): TMDBContent[] {
+  const seen = new Set<number>();
+  return contents.filter(content => {
+    if (seen.has(content.id)) return false;
+    seen.add(content.id);
+    return true;
+  });
+}
+
+
 
   private processFavorites(favorites: Favorite[]): void {
     this.favoritesIds = [];

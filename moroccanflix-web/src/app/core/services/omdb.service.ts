@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of, catchError, map } from 'rxjs';
 import { 
-  TMDBContent, 
+  TMDBContent 
   ContentType,
   OMDBResponse, 
   OMDBSearchResponse, 
