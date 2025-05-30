@@ -1,1 +1,243 @@
-<p>home works!</p>
+
+    <div class="home-container">
+      <!-- Header avec AppBar flottant -->
+      <header class="app-header" [class.scrolled]="isScrolled">
+        <div class="container">
+          <div class="header-content">
+            <!-- Menu burger pour mobile -->
+            <button class="menu-btn" (click)="toggleSidebar()">
+              <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Logo -->
+            <div class="logo" [class.hidden]="!isScrolled">
+              <h1>MoroccanFlix</h1>
+            </div>
+            
+            <!-- Navigation desktop -->
+            <nav class="nav-desktop">
+              <a href="#" class="nav-link active">Accueil</a>
+              <a href="#" class="nav-link">Séries</a>
+              <a href="#" class="nav-link">Films</a>
+              <a href="#" class="nav-link">Ma liste</a>
+            </nav>
+            
+            <!-- Actions -->
+            <div class="header-actions">
+              <button class="search-btn">
+                <i class="fas fa-search"></i>
+              </button>
+              <div class="user-menu" (click)="toggleUserMenu()">
+                <img [src]="currentUser?.avatar" [alt]="currentUser?.name" class="user-avatar">
+                <i class="fas fa-chevron-down"></i>
+              </div>
+              
+              <!-- Dropdown menu utilisateur -->
+              <div class="user-dropdown" [class.show]="showUserMenu">
+                <div class="user-info">
+                  <img [src]="currentUser?.avatar" [alt]="currentUser?.name">
+                  <div>
+                    <div class="user-name">{{ currentUser?.name }}</div>
+                    <div class="user-email">{{ currentUser?.email }}</div>
+                  </div>
+                </div>
+                <hr>
+                <a href="#" class="dropdown-item">
+                  <i class="fas fa-user"></i>
+                  Mon profil
+                </a>
+                <a href="#" class="dropdown-item">
+                  <i class="fas fa-cog"></i>
+                  Paramètres
+                </a>
+                <a href="#" class="dropdown-item">
+                  <i class="fas fa-heart"></i>
+                  Ma liste
+                </a>
+                <hr>
+                <button class="dropdown-item logout-btn" (click)="logout()">
+                  <i class="fas fa-sign-out-alt"></i>
+                  Se déconnecter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Sidebar pour mobile -->
+      <aside class="sidebar" [class.open]="sidebarOpen">
+        <div class="sidebar-header">
+          <h2>MoroccanFlix</h2>
+          <button class="close-btn" (click)="toggleSidebar()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#" class="sidebar-link active">
+            <i class="fas fa-home"></i>
+            Accueil
+          </a>
+          <a href="#" class="sidebar-link">
+            <i class="fas fa-tv"></i>
+            Séries
+          </a>
+          <a href="#" class="sidebar-link">
+            <i class="fas fa-film"></i>
+            Films
+          </a>
+          <a href="#" class="sidebar-link">
+            <i class="fas fa-heart"></i>
+            Ma liste
+          </a>
+          <a href="#" class="sidebar-link">
+            <i class="fas fa-download"></i>
+            Téléchargements
+          </a>
+          <a href="#" class="sidebar-link">
+            <i class="fas fa-history"></i>
+            Historique
+          </a>
+        </nav>
+      </aside>
+
+      <!-- Overlay pour sidebar mobile -->
+      <div class="sidebar-overlay" [class.show]="sidebarOpen" (click)="toggleSidebar()"></div>
+
+      <!-- Contenu principal -->
+      <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero-section">
+          <div class="hero-background">
+            <img src="/assets/images/welcome.jpg" alt="Featured content">
+            <div class="hero-overlay"></div>
+          </div>
+          
+          <div class="hero-content">
+            <div class="container">
+              <div class="hero-text">
+                <div class="badge">EXCLUSIVITÉ</div>
+                <h1 class="hero-title">DEMOLIDOR: RENASCIDO</h1>
+                <div class="hero-meta">
+                  <div class="rating-chip">
+                    <i class="fas fa-star"></i>
+                    <span>9.2</span>
+                  </div>
+                  <span class="meta-text">2023 • 4K Ultra HD</span>
+                </div>
+                <p class="hero-description">
+                  Matt Murdock, aveugle depuis l'enfance, combat l'injustice le jour en tant qu'avocat 
+                  et la nuit en tant que justicier masqué dans les rues de Hell's Kitchen.
+                </p>
+                <div class="hero-actions">
+                  <button class="btn btn-primary btn-lg">
+                    <i class="fas fa-play"></i>
+                    Lecture
+                  </button>
+                  <button class="btn btn-secondary">
+                    <i class="fas fa-plus"></i>
+                    Ma liste
+                  </button>
+                  <button class="btn btn-ghost">
+                    <i class="fas fa-info-circle"></i>
+                    Infos
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Categories -->
+        <section class="categories-section">
+          <div class="container">
+            <div class="categories-scroll">
+              <button class="category-btn active">Pour vous</button>
+              <button class="category-btn">Séries</button>
+              <button class="category-btn">Films</button>
+              <button class="category-btn">Ma liste</button>
+              <button class="category-btn">Top 10</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Content Sections -->
+        <section class="content-sections">
+          <div class="container">
+            <!-- Tendances actuelles -->
+            <div class="content-section">
+              <div class="section-header">
+                <h2 class="section-title">
+                  <i class="fas fa-trending-up"></i>
+                  Tendances actuelles
+                </h2>
+                <button class="see-all-btn">
+                  Tout voir
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <div class="movies-grid">
+                <div class="movie-card" *ngFor="let movie of trendingMovies">
+                  <img [src]="movie.poster_url" [alt]="movie.title">
+                  <div class="movie-overlay">
+                    <button class="play-btn">
+                      <i class="fas fa-play"></i>
+                    </button>
+                  </div>
+                  <div class="movie-badge" *ngIf="movie.first_air_date">NOUVEAU</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nouveautés -->
+            <div class="content-section">
+              <div class="section-header">
+                <h2 class="section-title">
+                  <i class="fas fa-sparkles"></i>
+                  Nouveautés
+                </h2>
+                <button class="see-all-btn">
+                  Tout voir
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <div class="movies-grid">
+                <div class="movie-card" *ngFor="let movie of newMovies">
+                  <img [src]="movie.poster_url" [alt]="movie.title">
+                  <div class="movie-overlay">
+                    <button class="play-btn">
+                      <i class="fas fa-play"></i>
+                    </button>
+                  </div>
+                  <div class="movie-badge">NOUVEAU</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recommandé pour vous -->
+            <div class="content-section">
+              <div class="section-header">
+                <h2 class="section-title">
+                  <i class="fas fa-thumbs-up"></i>
+                  Recommandé pour vous
+                </h2>
+                <button class="see-all-btn">
+                  Tout voir
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+              <div class="movies-grid">
+                <div class="movie-card" *ngFor="let movie of recommendedMovies">
+                  <img [src]="movie.poster_url" [alt]="movie.title">
+                  <div class="movie-overlay">
+                    <button class="play-btn">
+                      <i class="fas fa-play"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>

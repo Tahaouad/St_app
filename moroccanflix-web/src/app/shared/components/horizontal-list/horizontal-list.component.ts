@@ -5,7 +5,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MovieCardComponent } from '../movie-card/movie-card.component';
-import { TMDBContent } from '../../../core/models/content.model';
+import { TMDBContent } from 'C:/Users/tahao/workspace/Full_project/moroccanflix-web/src/app/core/services/content.service';
 
 @Component({
   selector: 'app-horizontal-list',
